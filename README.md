@@ -1,2 +1,2 @@
 # rsclustering
-rsclustering is a clsutering library for Rust
+rsclustering is a clustering library for Rust

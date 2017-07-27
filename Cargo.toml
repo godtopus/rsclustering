@@ -1,0 +1,6 @@
+[package]
+name = "rsclustering"
+version = "0.1.0"
+authors = ["godtopus <marcus.ording@hotmail.com>"]
+
+[dependencies]

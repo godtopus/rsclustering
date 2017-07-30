@@ -1,9 +1,7 @@
-use point::Point;
-
 pub struct SquaredEuclidean;
 
 pub trait Distance {
-    fn distance(a: &[f64], b: &[f64]) -> f64 {
+    fn distance(_: &[f64], _: &[f64]) -> f64 {
         0.0
     }
 }

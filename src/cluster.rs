@@ -1,12 +1,12 @@
-use std::collections::HashSet;
 use std::cmp::Ordering;
 use std::f64;
 use std::ops::Deref;
 use point::Point;
 use distance::*;
+use std::fmt::Debug;
 
 #[derive(Clone)]
-pub struct Cluster<T: Clone> {
+pub struct Cluster<T: Clone + Copy + Debug> {
     distance: f64,
     mean: Vec<f64>,
     points: Vec<Point<T>>,
@@ -14,7 +14,7 @@ pub struct Cluster<T: Clone> {
     closest: Option<Box<Cluster<T>>>
 }
 
-impl <T: Clone> Cluster<T> {
+impl <T: Clone + Copy + Debug> Cluster<T> {
     pub fn new(point: Point<T>) -> Cluster<T> {
         Cluster {
             distance: f64::INFINITY,
@@ -38,11 +38,11 @@ impl <T: Clone> Cluster<T> {
         let a_len = self.points.len() as f64;
         let b_len = b.points.len() as f64;
 
-        let merged_mean: &[f64] = match (merged_points.first(), merged_points.last()) {
-            (Some(first), Some(last)) if *first == *last => first.coordinates().clone(),
+        let merged_mean = match (merged_points.first(), merged_points.last()) {
+            (Some(first), Some(last)) if *first == *last => first.coordinates().to_vec(),
             _ => (0..self.mean.len()).map(|i| {
                 (a_len * self.mean.get(i).unwrap_or(&0.0) + b_len * b.mean.get(i).unwrap_or(&0.0)) / (a_len + b_len)
-            }).collect::<Vec<f64>>().as_slice()
+            }).collect::<Vec<f64>>()
         };
 
         let mut temp: Vec<Point<T>> = vec![];
@@ -91,21 +91,21 @@ impl <T: Clone> Cluster<T> {
     }
 }
 
-impl <T: Clone> Ord for Cluster<T> {
+impl <T: Clone + Copy + Debug> Ord for Cluster<T> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other).unwrap_or(Ordering::Equal)
     }
 }
 
-impl <T: Clone> PartialOrd for Cluster<T> {
+impl <T: Clone + Copy + Debug> PartialOrd for Cluster<T> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.distance.partial_cmp(&other.distance)
     }
 }
 
-impl <T: Clone> Eq for Cluster<T> {}
+impl <T: Clone + Copy + Debug> Eq for Cluster<T> {}
 
-impl <T: Clone> PartialEq for Cluster<T> {
+impl <T: Clone + Copy + Debug> PartialEq for Cluster<T> {
     fn eq(&self, other: &Self) -> bool {
         self.distance == other.distance
     }

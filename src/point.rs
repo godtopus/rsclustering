@@ -1,10 +1,12 @@
-#[derive(Clone)]
-pub struct Point<T: Clone> {
+use std::fmt::Debug;
+
+#[derive(Clone, Debug)]
+pub struct Point<T: Clone + Copy + Debug> {
     coordinates: Vec<f64>,
     data: Option<T>
 }
 
-impl <T: Clone> Point<T> {
+impl <T: Clone + Copy + Debug> Point<T> {
     pub fn new(coordinates: Vec<f64>) -> Self {
         Point {
             coordinates: coordinates,
@@ -24,9 +26,9 @@ impl <T: Clone> Point<T> {
     }
 }
 
-impl <T: Clone> Eq for Point<T> {}
+impl <T: Clone + Copy + Debug> Eq for Point<T> {}
 
-impl <T: Clone> PartialEq for Point<T> {
+impl <T: Clone + Copy + Debug> PartialEq for Point<T> {
     fn eq(&self, other: &Self) -> bool {
         self.coordinates.len() == other.coordinates.len() && self.coordinates.iter().zip(other.coordinates.iter()).all(|(x, y)| x == y)
     }

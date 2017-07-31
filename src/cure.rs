@@ -3,10 +3,9 @@
 use std::collections::BinaryHeap;
 use cluster::Cluster;
 use point::Point;
-use std::fmt::Debug;
 
-pub fn cure<T: Clone + Copy + Debug>(points: Vec<Point<T>>, no_clusters: usize, number_represent_points: usize, compression: f64) -> Vec<Cluster<T>> {
-    let mut clusters = points.into_iter().map(|p| Cluster::new(p)).collect::<BinaryHeap<Cluster<T>>>();
+pub fn cure(points: Vec<Point>, no_clusters: usize, number_represent_points: usize, compression: f64) -> Vec<Cluster> {
+    let mut clusters = points.into_iter().map(|p| Cluster::new(p)).collect::<BinaryHeap<Cluster>>();
 
     while clusters.len() > no_clusters {
         let merged = match clusters.pop() {

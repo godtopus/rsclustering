@@ -3,19 +3,18 @@ use std::f64;
 use std::ops::Deref;
 use point::Point;
 use distance::*;
-use std::fmt::Debug;
 
 #[derive(Clone)]
-pub struct Cluster<T: Clone + Copy + Debug> {
+pub struct Cluster {
     distance: f64,
     mean: Vec<f64>,
-    points: Vec<Point<T>>,
-    representative: Vec<Point<T>>,
-    closest: Option<Box<Cluster<T>>>
+    points: Vec<Point>,
+    representative: Vec<Point>,
+    closest: Option<Box<Cluster>>
 }
 
-impl <T: Clone + Copy + Debug> Cluster<T> {
-    pub fn new(point: Point<T>) -> Cluster<T> {
+impl Cluster {
+    pub fn new(point: Point) -> Cluster {
         Cluster {
             distance: f64::INFINITY,
             mean: point.coordinates().to_vec(),
@@ -25,7 +24,7 @@ impl <T: Clone + Copy + Debug> Cluster<T> {
         }
     }
 
-    pub fn merge(&self, number_represent_points: usize, compression: f64) -> Option<Cluster<T>> {
+    pub fn merge(&self, number_represent_points: usize, compression: f64) -> Option<Cluster> {
         let mut merged_points = self.points.clone();
         let b = match self.closest.clone() {
             None => return None,
@@ -45,7 +44,7 @@ impl <T: Clone + Copy + Debug> Cluster<T> {
             }).collect::<Vec<f64>>()
         };
 
-        let mut temp: Vec<Point<T>> = vec![];
+        let mut temp: Vec<Point> = vec![];
         for index in 0..number_represent_points {
             let mut maximal_distance = 0.0;
             let mut maximal_point = None;
@@ -91,21 +90,21 @@ impl <T: Clone + Copy + Debug> Cluster<T> {
     }
 }
 
-impl <T: Clone + Copy + Debug> Ord for Cluster<T> {
+impl Ord for Cluster {
     fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other).unwrap_or(Ordering::Equal)
     }
 }
 
-impl <T: Clone + Copy + Debug> PartialOrd for Cluster<T> {
+impl PartialOrd for Cluster {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.distance.partial_cmp(&other.distance)
     }
 }
 
-impl <T: Clone + Copy + Debug> Eq for Cluster<T> {}
+impl Eq for Cluster {}
 
-impl <T: Clone + Copy + Debug> PartialEq for Cluster<T> {
+impl PartialEq for Cluster {
     fn eq(&self, other: &Self) -> bool {
         self.distance == other.distance
     }

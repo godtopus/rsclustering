@@ -3,25 +3,24 @@ use distance::*;
 use std::f64;
 use std::ops::Deref;
 use std::cmp::Ordering;
-use std::fmt::Debug;
 
 #[derive(Eq, PartialEq, Clone, Debug)]
-pub struct KDTree<T: Clone + Copy + Debug + PartialEq + Eq> {
-    node: Option<Point<T>>,
-    left: Option<Box<KDTree<T>>>,
-    right: Option<Box<KDTree<T>>>,
+pub struct KDTree {
+    node: Option<Point>,
+    left: Option<Box<KDTree>>,
+    right: Option<Box<KDTree>>,
     axis: usize
 }
 
-impl <T: Clone + Copy + Debug + PartialEq + Eq> KDTree<T> {
-    pub fn new(points: &mut [Point<T>]) -> Self {
+impl KDTree {
+    pub fn new(points: &mut [Point]) -> Self {
         match points.is_empty() {
             true => Self::empty(),
             false => *Self::new_with_depth(points, 0).unwrap()
         }
     }
 
-    fn new_with_depth(points: &mut [Point<T>], depth: usize) -> Option<Box<Self>> {
+    fn new_with_depth(points: &mut [Point], depth: usize) -> Option<Box<Self>> {
         match points.len() {
             0 => None,
             1 => {
@@ -52,7 +51,7 @@ impl <T: Clone + Copy + Debug + PartialEq + Eq> KDTree<T> {
         }
     }
 
-    fn new_node(point: Point<T>, discriminator: usize) -> Option<Box<Self>> {
+    fn new_node(point: Point, discriminator: usize) -> Option<Box<Self>> {
         Some(Box::new(KDTree {
             node: Some(point),
             left: None,
@@ -61,7 +60,7 @@ impl <T: Clone + Copy + Debug + PartialEq + Eq> KDTree<T> {
         }))
     }
 
-    pub fn insert(&mut self, point: &mut Point<T>) {
+    pub fn insert(&mut self, point: &mut Point) {
         if self.node == None {
             *self = Self::new(&mut [point.clone()]);
             return
@@ -99,7 +98,7 @@ impl <T: Clone + Copy + Debug + PartialEq + Eq> KDTree<T> {
         }
     }
 
-    pub fn remove(&mut self, point: &Point<T>) -> bool {
+    pub fn remove(&mut self, point: &Point) -> bool {
         let mut nodes = vec![self];
 
         loop {
@@ -134,14 +133,14 @@ impl <T: Clone + Copy + Debug + PartialEq + Eq> KDTree<T> {
         false
     }
 
-    pub fn nearest_neighbor(&self, point: &Point<T>) -> Option<Point<T>> {
+    pub fn nearest_neighbor(&self, point: &Point) -> Option<Point> {
         match Self::nearest_neighbor_recursive(self, point, &mut None, f64::INFINITY) {
             Some((p, _)) => Some(p),
             _ => None
         }
     }
 
-    fn nearest_neighbor_recursive(cur_node: &KDTree<T>, point: &Point<T>, best: &Option<Point<T>>, best_distance: f64) -> Option<(Point<T>, f64)> {
+    fn nearest_neighbor_recursive(cur_node: &KDTree, point: &Point, best: &Option<Point>, best_distance: f64) -> Option<(Point, f64)> {
         let mut cur_best = best.clone();
         let mut cur_best_distance = best_distance;
 
@@ -213,11 +212,11 @@ impl <T: Clone + Copy + Debug + PartialEq + Eq> KDTree<T> {
         Some((cur_best.unwrap(), cur_best_distance))
     }
 
-    pub fn inorder(&self) -> Vec<Point<T>> {
+    pub fn inorder(&self) -> Vec<Point> {
         Self::recursive_inorder(&Some(self), vec![])
     }
 
-    fn recursive_inorder(branch: &Option<&KDTree<T>>, mut nodes: Vec<Point<T>>) -> Vec<Point<T>> {
+    fn recursive_inorder(branch: &Option<&KDTree>, mut nodes: Vec<Point>) -> Vec<Point> {
         if *branch == None {
             return nodes
         }
@@ -239,7 +238,7 @@ impl <T: Clone + Copy + Debug + PartialEq + Eq> KDTree<T> {
         nodes
     }
 
-    fn recursive_remove(node_to_remove: &mut KDTree<T>) {
+    fn recursive_remove(node_to_remove: &mut KDTree) {
         match (node_to_remove.left.as_ref(), node_to_remove.right.as_ref()) {
             (None, None) => {
                 *node_to_remove = Self::empty();
@@ -280,7 +279,7 @@ impl <T: Clone + Copy + Debug + PartialEq + Eq> KDTree<T> {
         };
     }
 
-    fn find_minimal_node(node_head: &KDTree<T>, discriminator: usize) -> Option<(Self, Option<Self>)> {
+    fn find_minimal_node(node_head: &KDTree, discriminator: usize) -> Option<(Self, Option<Self>)> {
         let mut cur_node = (node_head, node_head.right.as_ref());
         let mut stack = vec![];
         let mut candidates = vec![];
@@ -318,13 +317,13 @@ impl <T: Clone + Copy + Debug + PartialEq + Eq> KDTree<T> {
     }
 }
 
-impl <T: Clone + Copy + Debug + Eq + PartialEq> Ord for KDTree<T> {
+impl Ord for KDTree {
     fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other).unwrap_or(Ordering::Equal)
     }
 }
 
-impl <T: Clone + Copy + Debug + Eq + PartialEq> PartialOrd for KDTree<T> {
+impl PartialOrd for KDTree {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.node.clone().unwrap_or(Point::new(vec![])).coordinates()[self.axis].partial_cmp(&other.node.clone().unwrap_or(Point::new(vec![])).coordinates()[other.axis])
     }
@@ -350,7 +349,7 @@ mod tests {
             axis: 0
         };
 
-        let kd_tree = KDTree::<u32>::new(vec![].as_mut_slice());
+        let kd_tree = KDTree::new(vec![].as_mut_slice());
 
         assert_eq!(expected, kd_tree);
     }
@@ -384,7 +383,7 @@ mod tests {
             axis: 0
         };
 
-        let kd_tree = KDTree::<u32>::new(vec![Point::new(vec![0.0, 1.0]), Point::new(vec![1.0, 2.0]), Point::new(vec![2.0, 3.0]), Point::new(vec![3.0, 4.0]), Point::new(vec![4.0, 5.0])].as_mut_slice());
+        let kd_tree = KDTree::new(vec![Point::new(vec![0.0, 1.0]), Point::new(vec![1.0, 2.0]), Point::new(vec![2.0, 3.0]), Point::new(vec![3.0, 4.0]), Point::new(vec![4.0, 5.0])].as_mut_slice());
 
         assert_eq!(expected, kd_tree);
     }
@@ -413,7 +412,7 @@ mod tests {
             axis: 0
         };
 
-        let mut kd_tree = KDTree::<u32>::new(vec![].as_mut_slice());
+        let mut kd_tree = KDTree::new(vec![].as_mut_slice());
         kd_tree.insert(&mut Point::new(vec![0.0, 1.0]));
         kd_tree.insert(&mut Point::new(vec![1.0, 2.0]));
         kd_tree.insert(&mut Point::new(vec![-1.0, 0.0]));
@@ -431,7 +430,7 @@ mod tests {
             axis: 0
         };
 
-        let mut kd_tree = KDTree::<u32>::new(vec![Point::new(vec![0.0, 1.0])].as_mut_slice());
+        let mut kd_tree = KDTree::new(vec![Point::new(vec![0.0, 1.0])].as_mut_slice());
         kd_tree.remove(&Point::new(vec![0.0, 1.0]));
 
         assert_eq!(expected, kd_tree);
@@ -461,7 +460,7 @@ mod tests {
             axis: 0
         };
 
-        let mut kd_tree = KDTree::<u32>::new(vec![Point::new(vec![0.0, 1.0]), Point::new(vec![1.0, 2.0]), Point::new(vec![2.0, 3.0]), Point::new(vec![3.0, 4.0]), Point::new(vec![4.0, 5.0])].as_mut_slice());
+        let mut kd_tree = KDTree::new(vec![Point::new(vec![0.0, 1.0]), Point::new(vec![1.0, 2.0]), Point::new(vec![2.0, 3.0]), Point::new(vec![3.0, 4.0]), Point::new(vec![4.0, 5.0])].as_mut_slice());
         kd_tree.remove(&Point::new(vec![4.0, 5.0]));
 
         assert_eq!(expected, kd_tree);
@@ -471,7 +470,7 @@ mod tests {
     fn can_find_nearest_neighbor_kdtree() {
         let expected = Point::new(vec![2.0, 3.0]);
 
-        let kd_tree = KDTree::<u32>::new(vec![Point::new(vec![0.0, 1.0]), Point::new(vec![2.0, 3.0]), Point::new(vec![3.0, 4.0])].as_mut_slice());
+        let kd_tree = KDTree::new(vec![Point::new(vec![0.0, 1.0]), Point::new(vec![2.0, 3.0]), Point::new(vec![3.0, 4.0])].as_mut_slice());
         let nearest_neighbor = kd_tree.nearest_neighbor(&Point::new(vec![3.0, 4.0]));
 
         assert_eq!(expected, nearest_neighbor.unwrap());
@@ -481,7 +480,7 @@ mod tests {
     fn can_traverse_tree_inorder() {
         let expected = vec![Point::new(vec![0.0, 1.0]), Point::new(vec![1.0, 2.0]), Point::new(vec![2.0, 3.0]), Point::new(vec![3.0, 4.0]), Point::new(vec![4.0, 5.0])];
 
-        let kd_tree = KDTree::<u32>::new(vec![Point::new(vec![0.0, 1.0]), Point::new(vec![1.0, 2.0]), Point::new(vec![2.0, 3.0]), Point::new(vec![3.0, 4.0]), Point::new(vec![4.0, 5.0])].as_mut_slice());
+        let kd_tree = KDTree::new(vec![Point::new(vec![0.0, 1.0]), Point::new(vec![1.0, 2.0]), Point::new(vec![2.0, 3.0]), Point::new(vec![3.0, 4.0]), Point::new(vec![4.0, 5.0])].as_mut_slice());
 
         assert_eq!(expected, kd_tree.inorder());
     }

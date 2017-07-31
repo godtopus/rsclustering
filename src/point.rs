@@ -1,23 +1,16 @@
-use std::fmt::Debug;
+use std::hash::Hash;
+use std::mem;
+use std::hash::Hasher;
 
 #[derive(Clone, Debug)]
-pub struct Point<T: Clone + Copy + Debug> {
+pub struct Point {
     coordinates: Vec<f64>,
-    data: Option<T>
 }
 
-impl <T: Clone + Copy + Debug> Point<T> {
+impl Point {
     pub fn new(coordinates: Vec<f64>) -> Self {
         Point {
-            coordinates: coordinates,
-            data: None
-        }
-    }
-
-    pub fn new_with_data(coordinates: Vec<f64>, data: T) -> Self {
-        Point {
-            coordinates: coordinates,
-            data: Some(data)
+            coordinates: coordinates
         }
     }
 
@@ -26,10 +19,23 @@ impl <T: Clone + Copy + Debug> Point<T> {
     }
 }
 
-impl <T: Clone + Copy + Debug> Eq for Point<T> {}
+impl Eq for Point {}
 
-impl <T: Clone + Copy + Debug> PartialEq for Point<T> {
+impl PartialEq for Point {
     fn eq(&self, other: &Self) -> bool {
         self.coordinates.len() == other.coordinates.len() && self.coordinates.iter().zip(other.coordinates.iter()).all(|(x, y)| x == y)
+    }
+}
+
+impl Hash for Point {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        // Perform a bit-wise transform, relying on the fact that we
+        // are never Infinity or NaN
+
+        for coord in self.coordinates.iter() {
+            state.write_u64(unsafe { mem::transmute(coord) });
+        }
+
+        state.finish();
     }
 }

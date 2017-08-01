@@ -6,3 +6,11 @@ authors = ["godtopus <marcus.ording@hotmail.com>"]
 [dependencies]
 rand = "0.3.16"
 time = "0.1.38"
+itertools = "0.6.1"
+rayon = "0.8.2"
+
+[profile.dev]
+opt-level = 0
+
+[profile.test]
+opt-level = 3

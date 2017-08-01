@@ -1,5 +1,3 @@
-// http://ilpubs.stanford.edu:8090/778/1/2006-13.pdf
-
 use rand;
 use rand::Rng;
 use rand::distributions::{IndependentSample, Range};
@@ -11,23 +9,23 @@ use distance::*;
 use std::collections::HashMap;
 use itertools::Itertools;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
-use kmeans::KMeansInitialization::*;
+use kmedians::KMediansInitialization::*;
 
-pub enum KMeansInitialization {
+pub enum KMediansInitialization {
     Random,
     KMeansPlusPlus,
     Precomputed
 }
 
-pub struct KMeans {
+pub struct KMedians {
     assignments: Vec<usize>,
     centroids: Vec<Point>,
     iterations: usize,
     converged: bool
 }
 
-impl KMeans {
-    pub fn kmeans(points: &[Point], no_clusters: usize, max_iterations: usize, init_method: KMeansInitialization) -> Self {
+impl KMedians {
+    pub fn kmedians(points: &[Point], no_clusters: usize, max_iterations: usize, init_method: KMediansInitialization) -> Self {
         let dimension = points[0].coordinates().len() as f64;
 
         let mut centroids = Self::initial_centroids(points, no_clusters, init_method);
@@ -58,15 +56,18 @@ impl KMeans {
                 new_centroids[*index_c].push(points[*index_p].coordinates());
             }
 
-            centroids = new_centroids.into_iter().map(|ref v| {
-                let mut centroid = vec![0.0; dimension as usize];
-                for point in v.into_iter() {
-                    for i in 0..dimension as usize {
-                        centroid[i] += point[i];
-                    }
-                }
+            centroids = new_centroids.into_iter().map(|ref mut v| {
+                let relative_index_median = v.len() / 2;
 
-                centroid.into_iter().map(|x| x / dimension).collect()
+                (0..dimension as usize).map(|index_dimension| {
+                    v.sort_by(|p1, p2| p1[index_dimension].partial_cmp(&p2[index_dimension]).unwrap_or(Ordering::Equal));
+
+                    if v.len() % 2 == 0 {
+                        ((v[relative_index_median][index_dimension] + v[relative_index_median + 1][index_dimension]) as f64) / 2.0
+                    } else {
+                        v[relative_index_median][index_dimension]
+                    }
+                }).collect()
             }).collect();
 
             if has_converged {
@@ -76,7 +77,7 @@ impl KMeans {
             i += 1;
         }
 
-        KMeans {
+        KMedians {
             assignments: previous_round.into_iter().sorted_by(|&(p1, _), &(p2, _)| p1.partial_cmp(&p2).unwrap_or(Ordering::Equal)).into_iter().map(|(_, c)| c).collect(),
             centroids: centroids.into_iter().map(|c| Point::new(c)).collect(),
             iterations: i,
@@ -84,7 +85,7 @@ impl KMeans {
         }
     }
 
-    fn initial_centroids(points: &[Point], no_clusters: usize, init_method: KMeansInitialization) -> Vec<Vec<f64>> {
+    fn initial_centroids(points: &[Point], no_clusters: usize, init_method: KMediansInitialization) -> Vec<Vec<f64>> {
         match init_method {
             Random => {
                 let mut rng = rand::thread_rng();
@@ -147,20 +148,6 @@ mod tests {
     use rand;
     use rand::Rng;
     use time;
-    //use test::Bencher;
-
-    /*#[test]
-    fn can_run() {
-        let expected: Vec<KMeansCluster> = vec![
-            KMeansCluster::from(vec![Point::new(vec![0.0, 1.0]), Point::new(vec![1.0, 2.0]), Point::new(vec![2.0, 3.0])]),
-            KMeansCluster::from(vec![Point::new(vec![3.0, 4.0]), Point::new(vec![4.0, 5.0])])
-        ];
-        let mut input = vec![Point::new(vec![0.0, 1.0]), Point::new(vec![1.0, 2.0]), Point::new(vec![2.0, 3.0]), Point::new(vec![3.0, 4.0]), Point::new(vec![4.0, 5.0])];
-
-        let output = kmeans(input.as_mut_slice(), 2, usize::max_value());
-
-        assert_eq!(expected, output);
-    }*/
 
     #[test]
     fn bench_100000_points() {
@@ -173,7 +160,7 @@ mod tests {
         let mut total = 0_u64;
         for _ in 0..repeat_count {
             let start = time::precise_time_ns();
-            KMeans::kmeans(points.as_mut_slice(), 10, 15, KMeansInitialization::Random);
+            KMedians::kmedians(points.as_mut_slice(), 10, 15, KMediansInitialization::Random);
             let end = time::precise_time_ns();
             total += end - start
         }
@@ -183,14 +170,4 @@ mod tests {
 
         println!("{} runs, avg {}", repeat_count, avg_ms);
     }
-
-    /*#[bench]
-    fn bench_100000_points(b: &mut Bencher) {
-        let mut rng = rand::thread_rng();
-        let points = Vec::from_fn(100000, |_| Point::new(vec![rng.next_f64(), rng.next_f64()]));
-
-        b.iter(|| {
-            kmeans(points, 50, usize::max_value());
-        });
-    }*/
 }

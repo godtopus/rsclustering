@@ -2,6 +2,7 @@
 
 pub mod kmeans;
 pub mod kmedians;
+pub mod kmedoids;
 pub mod cure;
 
 pub mod kmeanscluster;

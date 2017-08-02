@@ -15,6 +15,7 @@ pub trait Distance {
 }
 
 impl Distance for SquaredEuclidean {
+    #[inline]
     fn distance(a: &[f64], b: &[f64]) -> f64 {
         a.iter()
             .zip(b.iter())
@@ -52,6 +53,7 @@ impl Distance for Chebyshev {
 }
 
 impl Distance for Manhattan {
+    #[inline]
     fn distance(a: &[f64], b: &[f64]) -> f64 {
         a.iter()
             .zip(b.iter())

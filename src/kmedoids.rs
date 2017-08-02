@@ -1,5 +1,3 @@
-// http://ilpubs.stanford.edu:8090/778/1/2006-13.pdf
-
 use rand;
 use rand::Rng;
 use rand::distributions::{IndependentSample, Range};
@@ -11,26 +9,24 @@ use distance::*;
 use std::collections::HashMap;
 use itertools::Itertools;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
-use kmeans::KMeansInitialization::*;
+use kmedoids::KMedoidsInitialization::*;
 
-pub enum KMeansInitialization {
+pub enum KMedoidsInitialization {
     Random,
     KMeansPlusPlus,
     Precomputed
 }
 
-pub struct KMeans {
+pub struct KMedoids {
     assignments: Vec<usize>,
     centroids: Vec<Point>,
     iterations: usize,
     converged: bool
 }
 
-impl KMeans {
-    pub fn kmeans(points: &[Point], no_clusters: usize, max_iterations: usize, init_method: KMeansInitialization) -> Self {
-        let dimension = points[0].coordinates().len() as f64;
-
-        let mut centroids = Self::initial_centroids(points, no_clusters, init_method);
+impl KMedoids {
+    pub fn kmedoids(points: &[Point], no_clusters: usize, max_iterations: usize, init_method: KMedoidsInitialization) -> Self {
+        let mut medoids = Self::initial_centroids(points, no_clusters, init_method);
 
         let mut previous_round: HashMap<usize, usize> = HashMap::with_capacity(points.len());
 
@@ -38,6 +34,7 @@ impl KMeans {
 
         while i < max_iterations {
             let mut has_converged = true;
+            let centroids: Vec<&[f64]> = medoids.iter().map(|(index_m, _)| points[*index_m].coordinates()).collect();
 
             for (index_p, p) in points.iter().enumerate() {
                 let (index_c, _) = Self::closest_centroid(p.coordinates(), centroids.as_slice());
@@ -57,41 +54,54 @@ impl KMeans {
                 break;
             }
 
-            let mut new_centroids: Vec<Vec<&[f64]>> = vec![vec![]; no_clusters];
+            let mut new_centroids: HashMap<usize, Vec<usize>> = HashMap::with_capacity(medoids.len());
             for (index_p, index_c) in previous_round.iter() {
-                new_centroids[*index_c].push(points[*index_p].coordinates());
+                new_centroids.get_mut(&index_c).unwrap().push(*index_p);
             }
 
-            centroids = new_centroids.into_iter().map(|ref v| {
-                let mut centroid = vec![0.0; dimension as usize];
-                for point in v.into_iter() {
-                    for i in 0..dimension as usize {
-                        centroid[i] += point[i];
-                    }
-                }
+            medoids = new_centroids.into_iter().map(|(index_c, cluster_points)| {
+                let current_cost = cluster_points.iter().map(|index_p| {
+                    Manhattan::distance(points[*index_p].coordinates(), points[index_c].coordinates())
+                }).sum();
 
-                centroid.into_iter().map(|x| x / dimension).collect()
+                let (medoid, _) = match cluster_points.iter().map(|candidate_medoid| {
+                    let old = Manhattan::distance(points[index_c].coordinates(), points[*candidate_medoid].coordinates());
+                    let new = cluster_points.iter()
+                                            .filter(|index_p| *index_p != candidate_medoid)
+                                            .map(|index_p| {
+                                                Manhattan::distance(points[*index_p].coordinates(), points[*candidate_medoid].coordinates())
+                                            })
+                                            .sum::<f64>();
+
+                    (candidate_medoid, old + new)
+                }).min_by(|&(_, a), &(_, b)| a.partial_cmp(&b).unwrap_or(Ordering::Equal)) {
+                    Some((candidate, distance)) if distance < current_cost => (*candidate, distance),
+                    Some(_) => (index_c, current_cost),
+                    None => panic!()
+                };
+
+                (medoid, vec![])
             }).collect();
 
             i += 1;
         }
 
-        KMeans {
+        KMedoids {
             assignments: previous_round.into_iter().sorted_by(|&(p1, _), &(p2, _)| p1.partial_cmp(&p2).unwrap_or(Ordering::Equal)).into_iter().map(|(_, c)| c).collect(),
-            centroids: centroids.into_iter().map(|c| Point::new(c)).collect(),
+            centroids: medoids.into_iter().map(|(index_m, _)| points[index_m].clone()).collect(),
             iterations: i,
             converged: i < max_iterations
         }
     }
 
-    fn initial_centroids(points: &[Point], no_clusters: usize, init_method: KMeansInitialization) -> Vec<Vec<f64>> {
+    fn initial_centroids(points: &[Point], no_clusters: usize, init_method: KMedoidsInitialization) -> HashMap<usize, Vec<usize>> {
         match init_method {
             Random => {
                 let mut rng = rand::thread_rng();
                 let between = Range::new(0, points.len());
 
                 (0..no_clusters).map(|_| {
-                    points[between.ind_sample(&mut rng)].coordinates().to_vec()
+                    (between.ind_sample(&mut rng), vec![])
                 }).collect()
             },
             KMeansPlusPlus => {
@@ -99,7 +109,8 @@ impl KMeans {
                 let between = Range::new(0, points.len());
 
                 let mut distances: Vec<f64> = vec![0.0; points.len()];
-                let mut centroids: Vec<Vec<f64>> = vec![points[between.ind_sample(&mut rng)].coordinates().to_vec()];
+                let mut centroids: Vec<&[f64]> = vec![points[between.ind_sample(&mut rng)].coordinates()];
+                let mut result: HashMap<usize, Vec<usize>> = HashMap::with_capacity(no_clusters);
 
                 for _ in 1..no_clusters {
                     let mut sum = points.iter().enumerate().fold(0.0, |sum, (index_p, p)| {
@@ -113,24 +124,25 @@ impl KMeans {
                         sum -= *d;
 
                         if sum <= 0f64 {
-                            centroids.push(points[index_p].coordinates().to_vec());
+                            centroids.push(points[index_p].coordinates());
+                            result.insert(index_p, vec![]);
                             break;
                         }
                     }
                 }
 
-                centroids
+                result
             },
             Precomputed => {
-                vec![]
+                HashMap::new()
             }
         }
     }
 
     #[inline]
-    fn closest_centroid(point: &[f64], centroids: &[Vec<f64>]) -> (usize, f64) {
+    fn closest_centroid(point: &[f64], centroids: &[&[f64]]) -> (usize, f64) {
         match centroids.iter().enumerate().map(|(index_c, c)| {
-            (index_c, SquaredEuclidean::distance(point, c))
+            (index_c, Manhattan::distance(point, c))
         }).min_by(|&(_, a), &(_, b)| {
             a.partial_cmp(&b).unwrap_or(Ordering::Equal)
         }) {
@@ -146,20 +158,6 @@ mod tests {
     use rand;
     use rand::Rng;
     use time;
-    //use test::Bencher;
-
-    /*#[test]
-    fn can_run() {
-        let expected: Vec<KMeansCluster> = vec![
-            KMeansCluster::from(vec![Point::new(vec![0.0, 1.0]), Point::new(vec![1.0, 2.0]), Point::new(vec![2.0, 3.0])]),
-            KMeansCluster::from(vec![Point::new(vec![3.0, 4.0]), Point::new(vec![4.0, 5.0])])
-        ];
-        let mut input = vec![Point::new(vec![0.0, 1.0]), Point::new(vec![1.0, 2.0]), Point::new(vec![2.0, 3.0]), Point::new(vec![3.0, 4.0]), Point::new(vec![4.0, 5.0])];
-
-        let output = kmeans(input.as_mut_slice(), 2, usize::max_value());
-
-        assert_eq!(expected, output);
-    }*/
 
     #[test]
     fn bench_100000_points() {
@@ -172,7 +170,7 @@ mod tests {
         let mut total = 0_u64;
         for _ in 0..repeat_count {
             let start = time::precise_time_ns();
-            KMeans::kmeans(points.as_mut_slice(), 10, 15, KMeansInitialization::Random);
+            KMedoids::kmedoids(points.as_mut_slice(), 10, 15, KMedoidsInitialization::Random);
             let end = time::precise_time_ns();
             total += end - start
         }
@@ -182,14 +180,4 @@ mod tests {
 
         println!("{} runs, avg {}", repeat_count, avg_ms);
     }
-
-    /*#[bench]
-    fn bench_100000_points(b: &mut Bencher) {
-        let mut rng = rand::thread_rng();
-        let points = Vec::from_fn(100000, |_| Point::new(vec![rng.next_f64(), rng.next_f64()]));
-
-        b.iter(|| {
-            kmeans(points, 50, usize::max_value());
-        });
-    }*/
 }

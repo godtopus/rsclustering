@@ -32,7 +32,7 @@ impl KMedians {
 
         let mut previous_round: HashMap<usize, usize> = HashMap::with_capacity(points.len());
 
-        let mut i = 1;
+        let mut i = 0;
 
         while i < max_iterations {
             let mut has_converged = true;
@@ -49,6 +49,10 @@ impl KMedians {
                         v.insert(index_c);
                     }
                 }
+            }
+
+            if has_converged {
+                break;
             }
 
             let mut new_centroids: Vec<Vec<&[f64]>> = vec![vec![]; no_clusters];
@@ -70,10 +74,6 @@ impl KMedians {
                 }).collect()
             }).collect();
 
-            if has_converged {
-                break;
-            }
-
             i += 1;
         }
 
@@ -91,9 +91,8 @@ impl KMedians {
                 let mut rng = rand::thread_rng();
                 let between = Range::new(0, points.len());
 
-                (0..no_clusters).map(|i| {
-                    let index = between.ind_sample(&mut rng);
-                    points[index].coordinates().to_vec()
+                (0..no_clusters).map(|_| {
+                    points[between.ind_sample(&mut rng)].coordinates().to_vec()
                 }).collect()
             },
             KMeansPlusPlus => {

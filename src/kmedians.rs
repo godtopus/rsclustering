@@ -25,10 +25,10 @@ pub struct KMedians {
 }
 
 impl KMedians {
-    pub fn kmedians(points: &[Point], no_clusters: usize, max_iterations: usize, init_method: KMediansInitialization) -> Self {
+    pub fn run(points: &[Point], no_clusters: usize, max_iterations: usize, init_method: KMediansInitialization, precomputed: Option<&[Vec<f64>]>) -> Self {
         let dimension = points[0].coordinates().len() as f64;
 
-        let mut centroids = Self::initial_centroids(points, no_clusters, init_method);
+        let mut centroids = Self::initial_centroids(points, no_clusters, init_method, precomputed);
 
         let mut previous_round: HashMap<usize, usize> = HashMap::with_capacity(points.len());
 
@@ -47,6 +47,7 @@ impl KMedians {
                     },
                     Vacant(v) => {
                         v.insert(index_c);
+                        has_converged = false;
                     }
                 }
             }
@@ -85,7 +86,7 @@ impl KMedians {
         }
     }
 
-    fn initial_centroids(points: &[Point], no_clusters: usize, init_method: KMediansInitialization) -> Vec<Vec<f64>> {
+    fn initial_centroids(points: &[Point], no_clusters: usize, init_method: KMediansInitialization, precomputed: Option<&[Vec<f64>]>) -> Vec<Vec<f64>> {
         match init_method {
             Random => {
                 let mut rng = rand::thread_rng();
@@ -123,7 +124,7 @@ impl KMedians {
                 centroids
             },
             Precomputed => {
-                vec![]
+                precomputed.expect("Expected a slice of clusters, on the form Vec<f64>").to_vec()
             }
         }
     }
@@ -159,7 +160,7 @@ mod tests {
         let mut total = 0_u64;
         for _ in 0..repeat_count {
             let start = time::precise_time_ns();
-            KMedians::kmedians(points.as_mut_slice(), 10, 15, KMediansInitialization::Random);
+            KMedians::run(points.as_mut_slice(), 10, 15, KMediansInitialization::Random, None);
             let end = time::precise_time_ns();
             total += end - start
         }

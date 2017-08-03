@@ -25,7 +25,7 @@ pub struct KMedoids {
 }
 
 impl KMedoids {
-    pub fn kmedoids(points: &[Point], no_clusters: usize, max_iterations: usize, init_method: KMedoidsInitialization) -> Self {
+    pub fn run(points: &[Point], no_clusters: usize, max_iterations: usize, init_method: KMedoidsInitialization) -> Self {
         let mut medoids = Self::initial_centroids(points, no_clusters, init_method);
 
         let mut previous_round: HashMap<usize, usize> = HashMap::with_capacity(points.len());
@@ -46,6 +46,7 @@ impl KMedoids {
                     },
                     Vacant(v) => {
                         v.insert(index_c);
+                        has_converged = false;
                     }
                 }
             }
@@ -56,7 +57,7 @@ impl KMedoids {
 
             let mut new_centroids: HashMap<usize, Vec<usize>> = HashMap::with_capacity(medoids.len());
             for (index_p, index_c) in previous_round.iter() {
-                new_centroids.get_mut(&index_c).unwrap().push(*index_p);
+                (*new_centroids.entry(*index_c).or_insert(vec![])).push(*index_p);
             }
 
             medoids = new_centroids.into_iter().map(|(index_c, cluster_points)| {
@@ -160,9 +161,9 @@ mod tests {
     use time;
 
     #[test]
-    fn bench_100000_points() {
+    fn bench_10000_points() {
         let mut rng = rand::thread_rng();
-        let mut points: Vec<Point> = (0..100000).map(|_| {
+        let mut points: Vec<Point> = (0..10000).map(|_| {
             Point::new((0..2).into_iter().map(|_| rng.next_f64()).collect())
         }).collect();
 
@@ -170,7 +171,7 @@ mod tests {
         let mut total = 0_u64;
         for _ in 0..repeat_count {
             let start = time::precise_time_ns();
-            KMedoids::kmedoids(points.as_mut_slice(), 10, 15, KMedoidsInitialization::Random);
+            KMedoids::run(points.as_mut_slice(), 10, 15, KMedoidsInitialization::Random);
             let end = time::precise_time_ns();
             total += end - start
         }

@@ -1,12 +1,14 @@
 #[allow(dead_code)]
 
 use std::cmp::Ordering;
+use point::Point;
 
 pub struct SquaredEuclidean;
 pub struct Euclidean;
 pub struct Hamming;
 pub struct Chebyshev;
 pub struct Manhattan;
+pub struct CosineSimilarity;
 
 pub trait Distance {
     fn distance(_: &[f64], _: &[f64]) -> f64 {
@@ -29,7 +31,8 @@ impl Distance for Euclidean {
         (a.iter()
             .zip(b.iter())
             .map(|(x, y)| (x - y) * (x - y))
-            .sum::<f64>()).sqrt()
+            .sum::<f64>())
+            .sqrt()
     }
 }
 
@@ -59,6 +62,18 @@ impl Distance for Manhattan {
             .zip(b.iter())
             .map(|(x, y)| (x - y).abs())
             .sum()
+    }
+}
+
+impl Distance for CosineSimilarity {
+    #[inline]
+    fn distance(a: &[f64], b: &[f64]) -> f64 {
+        let (dot_product, magnitude_a, magnitude_b) =
+            a.iter()
+             .zip(b.iter())
+             .fold((0.0, 0.0, 0.0), |(dp, m_a, m_b), (x, y)| (dp + x * y, m_a + x * x, m_b + y * y));
+
+        dot_product / (magnitude_a.sqrt() * magnitude_b.sqrt())
     }
 }
 

@@ -5,6 +5,7 @@ pub mod kmeans;
 pub mod kmedians;
 pub mod kmedoids;
 pub mod xmeans;
+pub mod agglomerative;
 
 pub mod kmeanscluster;
 pub mod cluster;

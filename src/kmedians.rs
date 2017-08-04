@@ -36,9 +36,13 @@ impl KMedians {
 
         while i < max_iterations {
             let mut has_converged = true;
+            let mut new_centroids: Vec<Vec<&[f64]>> = vec![vec![]; no_clusters];
 
             for (index_p, p) in points.iter().enumerate() {
                 let (index_c, _) = Self::closest_centroid(p.coordinates(), centroids.as_slice());
+
+                new_centroids[index_c].push(points[index_p].coordinates());
+
                 match previous_round.entry(index_p) {
                     Occupied(ref o) if o.get() == &index_c => (),
                     Occupied(mut o) => {
@@ -54,11 +58,6 @@ impl KMedians {
 
             if has_converged {
                 break;
-            }
-
-            let mut new_centroids: Vec<Vec<&[f64]>> = vec![vec![]; no_clusters];
-            for (index_p, index_c) in previous_round.iter() {
-                new_centroids[*index_c].push(points[*index_p].coordinates());
             }
 
             centroids = new_centroids.into_iter().map(|ref mut v| {

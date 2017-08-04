@@ -1,5 +1,5 @@
 [package]
-name = "rsclustering"
+name = "rust-clustering"
 version = "0.1.0"
 authors = ["godtopus <marcus.ording@hotmail.com>"]
 

@@ -35,9 +35,13 @@ impl KMedoids {
         while i < max_iterations {
             let mut has_converged = true;
             let centroids: Vec<&[f64]> = medoids.iter().map(|(index_m, _)| points[*index_m].coordinates()).collect();
+            let mut new_centroids: HashMap<usize, Vec<usize>> = HashMap::with_capacity(medoids.len());
 
             for (index_p, p) in points.iter().enumerate() {
                 let (index_c, _) = Self::closest_centroid(p.coordinates(), centroids.as_slice());
+
+                (*new_centroids.entry(index_c).or_insert(vec![])).push(index_p);
+
                 match previous_round.entry(index_p) {
                     Occupied(ref o) if o.get() == &index_c => (),
                     Occupied(mut o) => {
@@ -53,11 +57,6 @@ impl KMedoids {
 
             if has_converged {
                 break;
-            }
-
-            let mut new_centroids: HashMap<usize, Vec<usize>> = HashMap::with_capacity(medoids.len());
-            for (index_p, index_c) in previous_round.iter() {
-                (*new_centroids.entry(*index_c).or_insert(vec![])).push(*index_p);
             }
 
             medoids = new_centroids.into_iter().map(|(index_c, cluster_points)| {

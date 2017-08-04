@@ -44,7 +44,8 @@ impl XMeans {
 
         while no_clusters_max == None || k <= no_clusters_max.unwrap() {
             // 1. Improve-Params
-            let model: Vec<Vec<f64>> = KMeans::run(points, k, 100, KMeansInitialization::Precomputed, Some(&centroids)).centroids.iter().map(|c| c.coordinates().to_vec()).collect();
+            let kmeans = KMeans::run(points, k, 100, KMeansInitialization::Precomputed, Some(&centroids));
+            let model: Vec<Vec<f64>> = kmeans.centroids().iter().map(|c| c.coordinates().to_vec()).collect();
             let centroid_distances: Vec<Vec<f64>> = model.iter().map(|m| model.iter().map(|other_m| SquaredEuclidean::distance(m, other_m)).collect()).collect();
 
             for centroid in model.iter() {

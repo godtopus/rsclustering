@@ -5,6 +5,24 @@ use std::f64::consts::PI;
 pub struct Statistics;
 
 impl Statistics {
+    #[inline]
+    pub fn mean(centroids: &[&[f64]]) -> Vec<f64> {
+        match centroids.len() {
+            0 => vec![],
+            _ => {
+                let dimension = centroids[0].len() as f64;
+
+                centroids.iter().fold(vec![0.0; centroids[0].len()], |mut acc, next| {
+                    for i in 0..next.len() {
+                        acc[i] += next[i];
+                    }
+
+                    acc
+                }).into_iter().map(|x| x / dimension).collect()
+            }
+        }
+    }
+
     pub fn variance(centroid: &[f64], points: &[Point]) -> f64 {
         points.iter().map(|p| SquaredEuclidean::distance(centroid, p.coordinates())).sum()
     }

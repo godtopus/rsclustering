@@ -29,8 +29,6 @@ pub struct KMeans {
 
 impl KMeans {
     pub fn run(points: &[Point], no_clusters: usize, max_iterations: usize, init_method: KMeansInitialization, precomputed: Option<&[Vec<f64>]>) -> Self {
-        let dimension = points[0].coordinates().len() as f64;
-
         let mut centroids = Self::initial_centroids(points, no_clusters, init_method, precomputed);
 
         let mut previous_round: HashMap<usize, usize> = HashMap::with_capacity(points.len());
@@ -160,7 +158,7 @@ mod tests {
     }*/
 
     #[test]
-    fn bench_100000_points() {
+    fn bench_100000_points_kmeans() {
         let mut rng = rand::thread_rng();
         let mut points: Vec<Point> = (0..100000).map(|_| {
             Point::new((0..2).into_iter().map(|_| rng.next_f64()).collect())

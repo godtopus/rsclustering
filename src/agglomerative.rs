@@ -12,6 +12,7 @@ use itertools::Itertools;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use agglomerative::Link::*;
 use statistics::Statistics;
+use rayon::prelude::*;
 
 pub enum Link {
     Single,
@@ -35,30 +36,20 @@ pub struct Agglomerative {
 impl Agglomerative {
     pub fn run(points: &[Point], no_clusters: usize, link_criterion: &Link) -> Self {
         let mut clusters = match *link_criterion {
-            Single => (0..points.len()).map(|p| {
-                Cluster {
-                    points: vec![p],
-                    centroid: vec![]
-                }
-            }).collect::<Vec<Cluster>>(),
-            Complete => (0..points.len()).map(|p| {
-                Cluster {
-                    points: vec![p],
-                    centroid: vec![]
-                }
-            }).collect::<Vec<Cluster>>(),
-            Average => (0..points.len()).map(|p| {
-                Cluster {
-                    points: vec![p],
-                    centroid: vec![]
-                }
-            }).collect::<Vec<Cluster>>(),
-            Centroid => points.iter().enumerate().map(|(index, p)| {
-                Cluster {
-                    points: vec![index],
-                    centroid: p.coordinates().to_vec()
-                }
-            }).collect::<Vec<Cluster>>(),
+            Single | Complete | Average =>
+                (0..points.len()).map(|p| {
+                    Cluster {
+                        points: vec![p],
+                        centroid: vec![]
+                    }
+                }).collect::<Vec<Cluster>>(),
+            Centroid =>
+                points.iter().enumerate().map(|(index, p)| {
+                    Cluster {
+                        points: vec![index],
+                        centroid: p.coordinates().to_vec()
+                    }
+                }).collect::<Vec<Cluster>>(),
         };
 
         while clusters.len() > no_clusters {
@@ -83,7 +74,7 @@ impl Agglomerative {
     }
 
     fn merge_by_average_link(points: &[Point], mut clusters: Vec<Cluster>) -> Vec<Cluster> {
-        let ((closest1, closest2), _) = match clusters.iter().enumerate().map(|(index_c1, cluster1)| {
+        let ((closest1, closest2), _) = match clusters.par_iter().enumerate().map(|(index_c1, cluster1)| {
             match clusters.iter().skip(index_c1 + 1).enumerate().map(|(index_c2, cluster2)| {
                 let avg_distance = cluster1.points.iter().map(|point_c1| {
                     cluster2.points.iter().map(|point_c2| {
@@ -115,7 +106,7 @@ impl Agglomerative {
     }
 
     fn merge_by_centroid_link(mut clusters: Vec<Cluster>) -> Vec<Cluster> {
-        let ((closest1, closest2), _) = match clusters.iter().enumerate().map(|(index_c1, cluster1)| {
+        let ((closest1, closest2), _) = match clusters.par_iter().enumerate().map(|(index_c1, cluster1)| {
             match clusters.iter().skip(index_c1 + 1).enumerate().map(|(index_c2, cluster2)| {
                 ((index_c1, index_c2), SquaredEuclidean::distance(&cluster1.centroid, &cluster2.centroid))
             }).min_by(|&(_, a), &(_, b)| {
@@ -142,7 +133,7 @@ impl Agglomerative {
     }
 
     fn merge_by_complete_link(points: &[Point], mut clusters: Vec<Cluster>) -> Vec<Cluster> {
-        let ((closest1, closest2), _) = match clusters.iter().enumerate().map(|(index_c1, cluster1)| {
+        let ((closest1, closest2), _) = match clusters.par_iter().enumerate().map(|(index_c1, cluster1)| {
             match clusters.iter().skip(index_c1 + 1).enumerate().map(|(index_c2, cluster2)| {
                 let max_distance = match cluster1.points.iter().map(|point_c1| {
                     match cluster2.points.iter().map(|point_c2| {
@@ -184,7 +175,7 @@ impl Agglomerative {
     }
 
     fn merge_by_single_link(points: &[Point], mut clusters: Vec<Cluster>) -> Vec<Cluster> {
-        let ((closest1, closest2), _) = match clusters.iter().enumerate().map(|(index_c1, cluster1)| {
+        let ((closest1, closest2), _) = match clusters.par_iter().enumerate().map(|(index_c1, cluster1)| {
             match clusters.iter().skip(index_c1 + 1).enumerate().map(|(index_c2, cluster2)| {
                 let max_distance = match cluster1.points.iter().map(|point_c1| {
                     match cluster2.points.iter().map(|point_c2| {

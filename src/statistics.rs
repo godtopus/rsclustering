@@ -7,6 +7,7 @@ pub struct Statistics;
 impl Statistics {
     #[inline]
     pub fn mean(centroids: &[&[f64]]) -> Vec<f64> {
+        #[inline]
         match centroids.len() {
             0 => vec![],
             _ => {

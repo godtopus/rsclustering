@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use kmedoids::KMedoidsInitialization::*;
+use rayon::prelude::*;
 
 pub enum KMedoidsInitialization {
     Random,
@@ -59,7 +60,7 @@ impl KMedoids {
                 break;
             }
 
-            medoids = new_centroids.into_iter().map(|(index_c, cluster_points)| {
+            medoids = new_centroids.into_par_iter().map(|(index_c, cluster_points)| {
                 let current_cost = cluster_points.iter().map(|index_p| {
                     Manhattan::distance(points[*index_p].coordinates(), points[index_c].coordinates())
                 }).sum();
@@ -160,7 +161,7 @@ mod tests {
     use time;
 
     #[test]
-    fn bench_10000_points() {
+    fn bench_10000_points_kmedoids() {
         let mut rng = rand::thread_rng();
         let mut points: Vec<Point> = (0..10000).map(|_| {
             Point::new((0..2).into_iter().map(|_| rng.next_f64()).collect())

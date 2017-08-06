@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use kmedians::KMediansInitialization::*;
+use rayon::prelude::*;
 
 pub enum KMediansInitialization {
     Random,
@@ -60,7 +61,7 @@ impl KMedians {
                 break;
             }
 
-            centroids = new_centroids.into_iter().map(|ref mut v| {
+            centroids = new_centroids.into_par_iter().map(|ref mut v| {
                 let relative_index_median = v.len() / 2;
 
                 (0..dimension as usize).map(|index_dimension| {
@@ -149,7 +150,7 @@ mod tests {
     use time;
 
     #[test]
-    fn bench_100000_points() {
+    fn bench_100000_points_kmedians() {
         let mut rng = rand::thread_rng();
         let mut points: Vec<Point> = (0..100000).map(|_| {
             Point::new((0..2).into_iter().map(|_| rng.next_f64()).collect())

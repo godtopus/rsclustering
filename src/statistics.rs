@@ -35,7 +35,7 @@ impl Statistics {
         matrix.inverse_mut();
         matrix.transpose_mut();
 
-        matrix.into_vector().into_iter().chunks(cols).map(|chunk| chunk).collect()
+        matrix.into_vector().chunks(cols).map(|chunk| chunk.to_vec()).collect()
     }
 
     pub fn covariance(matrix: &[&[f64]]) -> Vec<Vec<f64>> {

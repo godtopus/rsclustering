@@ -1,13 +1,13 @@
 use distance::*;
 use point::Point;
 use std::f64::consts::PI;
+use nalgebra::*;
 
 pub struct Statistics;
 
 impl Statistics {
     #[inline]
     pub fn mean(centroids: &[&[f64]]) -> Vec<f64> {
-        #[inline]
         match centroids.len() {
             0 => vec![],
             _ => {
@@ -26,6 +26,44 @@ impl Statistics {
 
     pub fn variance(centroid: &[f64], points: &[Point]) -> f64 {
         points.iter().map(|p| SquaredEuclidean::distance(centroid, p.coordinates())).sum()
+    }
+
+    pub fn inverse_covariance(matrix: &[&[f64]]) -> Vec<Vec<f64>> {
+        let cols = matrix[0].len();
+
+        let mut matrix = DMatrix::from_row_vector(matrix.len(), cols, &matrix.into_iter().flat_map(|m| m.to_vec()).into_iter().collect::<Vec<f64>>()).covariance();
+        matrix.inverse_mut();
+        matrix.transpose_mut();
+
+        matrix.into_vector().into_iter().chunks(cols).map(|chunk| chunk).collect()
+    }
+
+    pub fn covariance(matrix: &[&[f64]]) -> Vec<Vec<f64>> {
+        let rows = matrix.len();
+        let cols = matrix[0].len();
+        let divisor = rows as f64 - 1.0;
+
+        let means: Vec<f64> = matrix.iter().fold(vec![0.0; cols], |mut means, next| {
+            for i in 0..cols {
+                means[i] += next[i];
+            }
+
+            means
+        }).into_iter().map(|a| a / (rows as f64)).collect();
+
+        let mut covariance_matrix = vec![vec![0.0; cols]; cols];
+        for i in 0..cols {
+            for j in i..cols {
+                let sum = (0..rows).into_iter()
+                                   .map(|k| (matrix[k][j] - means[j]) * (matrix[k][i] - means[i]))
+                                   .sum::<f64>() / divisor;
+
+                covariance_matrix[i][j] = sum;
+                covariance_matrix[j][i] = sum;
+            }
+        }
+
+        return covariance_matrix;
     }
 
     /**
@@ -78,4 +116,9 @@ impl Statistics {
         let p5 = -ni * n.ln();
         (p1 + p2 + p3) / 2.0 + p4 + p5
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
 }

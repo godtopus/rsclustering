@@ -20,3 +20,4 @@ extern crate rand;
 extern crate time;
 extern crate itertools;
 extern crate rayon;
+extern crate nalgebra;

@@ -8,6 +8,7 @@ rand = "0.3.16"
 time = "0.1.38"
 itertools = "0.6.1"
 rayon = "0.8.2"
+nalgebra = "0.10.*"
 
 [profile.dev]
 opt-level = 0

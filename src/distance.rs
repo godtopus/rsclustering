@@ -77,32 +77,6 @@ impl Distance for CosineSimilarity {
     }
 }
 
-fn covariance_matrix(points: &[&[f64]]) -> Vec<Vec<f64>> {
-    let row_length = points.len();
-    let col_length = points[0].len();
-    let means: Vec<f64> = points.iter().fold(vec![0.0; col_length], |mut means, next| {
-        for i in 0..col_length {
-            means[i] += next[i];
-        }
-
-        means
-    }).into_iter().map(|a| a / (col_length as f64)).collect();
-
-    let mut covariance_matrix = vec![vec![0.0; col_length]; row_length];
-
-    for i in 0..row_length {
-        for j in 0..col_length {
-            for k in 0..row_length {
-                covariance_matrix[i][j] = (means[i] - points[k][i]) * (means[j] - points[k][j]);
-            }
-
-            covariance_matrix[i][j] /= (row_length - 1) as f64;
-        }
-    }
-
-    covariance_matrix
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

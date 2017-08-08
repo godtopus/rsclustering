@@ -29,13 +29,17 @@ impl Statistics {
     }
 
     pub fn inverse_covariance(matrix: &[&[f64]]) -> Vec<Vec<f64>> {
-        let cols = matrix[0].len();
+        let mut dmatrix = Self::inverse_covariance_matrix(matrix);
+        dmatrix.transpose_mut();
 
-        let mut matrix = DMatrix::from_row_vector(matrix.len(), cols, &matrix.into_iter().flat_map(|m| m.to_vec()).into_iter().collect::<Vec<f64>>()).covariance();
+        dmatrix.into_vector().chunks(matrix[0].len()).map(|chunk| chunk.to_vec()).collect()
+    }
+
+    pub fn inverse_covariance_matrix(matrix: &[&[f64]]) -> DMatrix<f64> {
+        let mut matrix = DMatrix::from_row_vector(matrix.len(), matrix[0].len(), &matrix.into_iter().flat_map(|m| m.to_vec()).into_iter().collect::<Vec<f64>>()).covariance();
         matrix.inverse_mut();
-        matrix.transpose_mut();
 
-        matrix.into_vector().chunks(cols).map(|chunk| chunk.to_vec()).collect()
+        matrix
     }
 
     pub fn covariance(matrix: &[&[f64]]) -> Vec<Vec<f64>> {
@@ -121,4 +125,12 @@ impl Statistics {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /*#[test]
+    fn covariance_is_correct() {
+        let expected = vec![vec![0.025, 0.0075, 0.00175], vec![0.0075, 0.007, 0.00135], vec![0.00175, 0.00135, 0.00043]];
+        let input = vec![vec![4.0, 2.0, 0.6], vec![4.2, 2.1, 0.59], vec![3.9, 2.0, 0.58], vec![4.3, 2.1, 0.62], vec![4.1, 2.2, 0.63]];
+
+        assert_eq!(expected, Statistics::inverse_covariance(input));
+    }*/
 }

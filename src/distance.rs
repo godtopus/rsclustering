@@ -1,7 +1,6 @@
-#[allow(dead_code)]
-
 use std::cmp::Ordering;
-use point::Point;
+use nalgebra::*;
+use statistics::Statistics;
 
 pub struct SquaredEuclidean;
 pub struct Euclidean;
@@ -9,11 +8,17 @@ pub struct Hamming;
 pub struct Chebyshev;
 pub struct Manhattan;
 pub struct CosineSimilarity;
+pub struct Mahalanobis;
+pub struct Minkowski;
 
 pub trait Distance {
     fn distance(_: &[f64], _: &[f64]) -> f64 {
-        0.0
+        unimplemented!()
     }
+
+    fn distance_with_parameter(_: &[f64], _: &[f64], _: f64) -> f64 { unimplemented!() }
+
+    fn distance_with_covariance(_: &[f64], _: &[f64], _: &[&[f64]]) -> f64 { unimplemented!() }
 }
 
 impl Distance for SquaredEuclidean {
@@ -74,6 +79,27 @@ impl Distance for CosineSimilarity {
              .fold((0.0, 0.0, 0.0), |(dp, m_a, m_b), (x, y)| (dp + x * y, m_a + x * x, m_b + y * y));
 
         dot_product / (magnitude_a.sqrt() * magnitude_b.sqrt())
+    }
+}
+
+impl Distance for Mahalanobis {
+    #[inline]
+    fn distance_with_covariance(observation: &[f64], mean: &[f64], observations: &[&[f64]]) -> f64 {
+        let column_vector = DMatrix::from_column_iter(observation.len(), 1, observation.iter().zip(mean.iter()).map(|(o, m)| o - m));
+        let row_vector = column_vector.transpose();
+        let inverse_covariance = Statistics::inverse_covariance_matrix(observations);
+
+        (row_vector * inverse_covariance * column_vector).into_vector().into_iter().sum::<f64>().sqrt()
+    }
+}
+
+impl Distance for Minkowski {
+    fn distance_with_parameter(a: &[f64], b: &[f64], p: f64) -> f64 {
+        (a.iter()
+            .zip(b.iter())
+            .map(|(x, y)| (x - y) * (x - y))
+            .sum::<f64>())
+            .powf(1.0 / p)
     }
 }
 

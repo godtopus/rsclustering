@@ -8,9 +8,6 @@ use std::cmp::Ordering;
 use std::usize;
 use point::Point;
 use distance::*;
-use std::collections::HashMap;
-use itertools::Itertools;
-use std::collections::hash_map::Entry::{Occupied, Vacant};
 use kmeans::KMeansInitialization::*;
 use statistics::Statistics;
 
@@ -31,7 +28,7 @@ impl KMeans {
     pub fn run(points: &[Point], no_clusters: usize, max_iterations: usize, init_method: KMeansInitialization, precomputed: Option<&[Vec<f64>]>) -> Self {
         let mut centroids = Self::initial_centroids(points, no_clusters, init_method, precomputed);
 
-        let mut previous_round: HashMap<usize, usize> = HashMap::with_capacity(points.len());
+        let mut previous_round = vec![usize::max_value(); points.len()];
 
         let mut i = 0;
 
@@ -39,23 +36,17 @@ impl KMeans {
             let mut has_converged = true;
             let mut new_centroids: Vec<Vec<&[f64]>> = vec![vec![]; no_clusters];
 
-            for (index_p, p) in points.iter().enumerate() {
+            previous_round = points.iter().zip(previous_round.iter()).map(|(p, previous_c)| {
                 let (index_c, _) = Self::closest_centroid(p.coordinates(), centroids.as_slice());
 
-                new_centroids[index_c].push(points[index_p].coordinates());
+                new_centroids[index_c].push(p.coordinates());
 
-                match previous_round.entry(index_p) {
-                    Occupied(ref o) if o.get() == &index_c => (),
-                    Occupied(mut o) => {
-                        o.insert(index_c);
-                        has_converged = false;
-                    },
-                    Vacant(v) => {
-                        v.insert(index_c);
-                        has_converged = false;
-                    }
+                if has_converged && index_c != *previous_c {
+                    has_converged = false;
                 }
-            }
+
+                index_c
+            }).collect();
 
             if has_converged {
                 break;
@@ -69,7 +60,7 @@ impl KMeans {
         }
 
         KMeans {
-            assignments: previous_round.into_iter().sorted_by(|&(p1, _), &(p2, _)| p1.partial_cmp(&p2).unwrap_or(Ordering::Equal)).into_iter().map(|(_, c)| c).collect(),
+            assignments: previous_round,
             centroids: centroids.into_iter().map(|c| Point::new(c)).collect(),
             iterations: i,
             converged: i < max_iterations

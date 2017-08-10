@@ -9,6 +9,9 @@ use point::Point;
 use distance::*;
 use fuzzy_c_means::FuzzyCMeansInitialization::*;
 use statistics::Statistics;
+use rayon::prelude::*;
+
+use std::sync::{Mutex};
 
 pub enum FuzzyCMeansInitialization {
     Random,
@@ -37,25 +40,26 @@ impl FuzzyCMeans {
 
         let mut centroids = Self::initial_centroids(points, no_clusters, init_method, precomputed);
 
-        let mut previous_round: Vec<Vec<f64>> = vec![vec![f64::INFINITY; dimension]; points.len()];
+        let mut previous_round: Vec<Vec<f64>> = vec![vec![1.0 / no_clusters as f64; no_clusters]; points.len()];
 
         let mut i = 0;
 
         while i < max_iterations {
-            let mut max_delta = f64::INFINITY;
+            let max_delta = Mutex::new(f64::INFINITY);
 
-            previous_round = points.iter().zip(previous_round.iter()).map(|(p, previous_memberships)| {
-                let memberships = Self::membership(p.coordinates(), centroids.as_slice(), fuzziness);
+            previous_round = points.par_iter().zip(previous_round.par_iter()).map(|(p, previous_memberships)| {
+                let memberships = Self::memberships(p.coordinates(), centroids.as_slice(), fuzziness);
 
                 let delta = SquaredEuclidean::distance(&memberships, previous_memberships);
-                if delta > max_delta {
-                    max_delta = delta;
+                let mut max_delta = max_delta.lock().unwrap();
+                if delta < *max_delta {
+                    *max_delta = delta;
                 }
 
                 memberships
             }).collect();
 
-            if max_delta < epsilon {
+            if *max_delta.lock().unwrap() < epsilon {
                 break;
             }
 
@@ -132,17 +136,15 @@ impl FuzzyCMeans {
     }
 
     #[inline]
-    fn membership(point: &[f64], centroids: &[Vec<f64>], fuzziness: f64) -> Vec<f64> {
-        let mut total_distance = 0.0;
-        centroids.iter().map(|c| {
-            let distance = SquaredEuclidean::distance(point, c);
-            total_distance += distance;
-            distance
-        })
-        .collect::<Vec<f64>>()
-        .into_iter()
-        .map(|distance| 1.0 / (distance / total_distance).powf(2.0 / (fuzziness - 1.0)))
-        .collect()
+    fn memberships(point: &[f64], centroids: &[Vec<f64>], fuzziness: f64) -> Vec<f64> {
+        centroids.iter().map(|c_j| {
+            let distance = SquaredEuclidean::distance(point, c_j);
+            let total_distance = centroids.iter().map(|c_k| {
+                (distance / SquaredEuclidean::distance(point, c_k)).powf(2.0 / (fuzziness - 1.0))
+            }).sum::<f64>();
+
+            1.0 / total_distance
+        }).collect()
     }
 
     pub fn centroids(&self) -> &[Point] {
@@ -174,7 +176,7 @@ mod tests {
     #[test]
     fn bench_100000_points_fuzzycmeans() {
         let mut rng = rand::thread_rng();
-        let mut points: Vec<Point> = (0..10000).map(|_| {
+        let mut points: Vec<Point> = (0..100000).map(|_| {
             Point::new((0..2).into_iter().map(|_| rng.next_f64()).collect())
         }).collect();
 

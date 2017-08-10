@@ -1,15 +1,8 @@
-use rand;
-use rand::Rng;
-use rand::distributions::{IndependentSample, Range};
-
 use std::cmp::Ordering;
 use std::usize;
 use std::f64;
 use point::Point;
 use distance::*;
-use std::collections::HashMap;
-use itertools::Itertools;
-use std::collections::hash_map::Entry::{Occupied, Vacant};
 use agglomerative::Link::*;
 use statistics::Statistics;
 use rayon::prelude::*;
@@ -35,21 +28,21 @@ pub struct Agglomerative {
 
 impl Agglomerative {
     pub fn run(points: &[Point], no_clusters: usize, link_criterion: &Link) -> Self {
-        let mut clusters = match *link_criterion {
+        let mut clusters: Vec<Cluster> = match *link_criterion {
             Single | Complete | Average =>
                 (0..points.len()).map(|p| {
                     Cluster {
                         points: vec![p],
                         centroid: vec![]
                     }
-                }).collect::<Vec<Cluster>>(),
+                }).collect(),
             Centroid =>
                 points.iter().enumerate().map(|(index, p)| {
                     Cluster {
                         points: vec![index],
                         centroid: p.coordinates().to_vec()
                     }
-                }).collect::<Vec<Cluster>>(),
+                }).collect(),
         };
 
         while clusters.len() > no_clusters {

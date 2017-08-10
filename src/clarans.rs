@@ -1,5 +1,4 @@
 use rand;
-use rand::Rng;
 use rand::distributions::{IndependentSample, Range};
 
 use std::cmp::Ordering;
@@ -9,8 +8,6 @@ use point::Point;
 use distance::*;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use itertools::Itertools;
-use std::collections::hash_map::Entry::{Occupied, Vacant};
 use rayon::prelude::*;
 
 pub struct Clarans {
@@ -54,7 +51,7 @@ impl Clarans {
                     candidate_medoid_index = point_range.ind_sample(&mut rng);
                 }
 
-                let candidate_cost: f64 = points.iter().enumerate().filter(|&(index_p, _)| !current_indexes.contains(&index_p)).map(|(index_p, p)| {
+                let candidate_cost: f64 = points.par_iter().enumerate().filter(|&(index_p, _)| !current_indexes.contains(&index_p)).map(|(index_p, p)| {
                     let point_cluster_index = *assignments.get(&index_p).unwrap();
                     let (point_medoid_index, point_medoid_coordinates) = medoids[point_cluster_index];
 

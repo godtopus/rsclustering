@@ -1,3 +1,6 @@
+// http://cse.ucdenver.edu/~cscialtman/CVData/P_2011.pdf
+// https://www.researchgate.net/publication/3335850_Reducing_the_time_complexity_of_the_fuzzy_c-means_algorithm
+
 use rand;
 use rand::Rng;
 use rand::distributions::{IndependentSample, Range};
@@ -15,12 +18,12 @@ use std::sync::{Mutex};
 
 pub enum FuzzyCMeansInitialization {
     Random,
-    KMeansPlusPlus,
+    FuzzyCMeansPlusPlus,
     Precomputed
 }
 
 pub struct FuzzyCMeans {
-    assignments: Vec<usize>,
+    assignments: Vec<Vec<f64>>,
     centroids: Vec<Point>,
     iterations: usize,
     converged: bool
@@ -40,7 +43,7 @@ impl FuzzyCMeans {
 
         let mut centroids = Self::initial_centroids(points, no_clusters, init_method, precomputed);
 
-        let mut previous_round: Vec<Vec<f64>> = vec![vec![1.0 / no_clusters as f64; no_clusters]; points.len()];
+        let mut previous_round: Vec<Vec<f64>> = points.par_iter().map(|p| Self::memberships(p.coordinates(), &centroids, fuzziness)).collect();
 
         let mut i = 0;
 
@@ -84,7 +87,7 @@ impl FuzzyCMeans {
         }
 
         FuzzyCMeans {
-            assignments: vec![],//previous_round.into_iter().sorted_by(|&(p1, _), &(p2, _)| p1.partial_cmp(&p2).unwrap_or(Ordering::Equal)).into_iter().map(|(_, c)| c).collect(),
+            assignments: previous_round,
             centroids: centroids.into_iter().map(|c| Point::new(c)).collect(),
             iterations: i,
             converged: i < max_iterations
@@ -101,23 +104,23 @@ impl FuzzyCMeans {
                     points[between.ind_sample(&mut rng)].coordinates().to_vec()
                 }).collect()
             },
-            KMeansPlusPlus => {
-                /*let mut rng = rand::thread_rng();
+            FuzzyCMeansPlusPlus => {
+                let mut rng = rand::thread_rng();
                 let between = Range::new(0, points.len());
 
-                let mut distances: Vec<f64> = vec![0.0; points.len()];
                 let mut centroids: Vec<Vec<f64>> = vec![points[between.ind_sample(&mut rng)].coordinates().to_vec()];
 
                 for _ in 1..no_clusters {
-                    let mut sum = points.iter().enumerate().fold(0.0, |sum, (index_p, p)| {
+                    let mut sum = 0.0;
+                    let distances: Vec<(usize, f64)> = points.iter().enumerate().map(|(index_p, p)| {
                         let (_, distance_c) = Self::closest_centroid(p.coordinates(), centroids.as_slice());
-                        distances[index_p] = distance_c;
-                        sum + distance_c
-                    });
+                        sum + distance_c;
+                        (index_p, distance_c)
+                    }).collect();
 
                     sum *= rng.next_f64();
-                    for (index_p, d) in distances.iter().enumerate() {
-                        sum -= *d;
+                    for (index_p, d) in distances.into_iter() {
+                        sum -= d;
 
                         if sum <= 0f64 {
                             centroids.push(points[index_p].coordinates().to_vec());
@@ -126,12 +129,23 @@ impl FuzzyCMeans {
                     }
                 }
 
-                centroids*/
-                vec![]
+                centroids
             },
             Precomputed => {
                 precomputed.expect("Expected a slice of clusters, on the form Vec<f64>").to_vec()
             }
+        }
+    }
+
+    #[inline]
+    fn closest_centroid(point: &[f64], centroids: &[Vec<f64>]) -> (usize, f64) {
+        match centroids.iter().enumerate().map(|(index_c, c)| {
+            (index_c, SquaredEuclidean::distance(point, c))
+        }).min_by(|&(_, a), &(_, b)| {
+            a.partial_cmp(&b).unwrap_or(Ordering::Equal)
+        }) {
+            Some(closest) => closest,
+            None => panic!()
         }
     }
 
@@ -184,7 +198,7 @@ mod tests {
         let mut total = 0_u64;
         for _ in 0..repeat_count {
             let start = time::precise_time_ns();
-            FuzzyCMeans::run(points.as_mut_slice(), 10, 15, 1.5, 0.01, FuzzyCMeansInitialization::Random, None);
+            FuzzyCMeans::run(points.as_mut_slice(), 10, 15, 2.0, 0.00001, FuzzyCMeansInitialization::Random, None);
             let end = time::precise_time_ns();
             total += end - start
         }

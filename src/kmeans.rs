@@ -25,36 +25,41 @@ pub struct KMeans {
 }
 
 impl KMeans {
-    pub fn run(points: &[Point], no_clusters: usize, max_iterations: usize, init_method: KMeansInitialization, precomputed: Option<&[Vec<f64>]>) -> Self {
+    pub fn run(points: &[Point], no_clusters: usize, max_iterations: usize, tolerance: f64, init_method: KMeansInitialization, precomputed: Option<&[Vec<f64>]>) -> Self {
         let mut centroids = Self::initial_centroids(points, no_clusters, init_method, precomputed);
 
         let mut previous_round = vec![usize::max_value(); points.len()];
 
         let mut i = 0;
+        let stop_condition = tolerance * tolerance;
 
         while i < max_iterations {
-            let mut has_converged = true;
             let mut new_centroids: Vec<Vec<&[f64]>> = vec![vec![]; no_clusters];
 
-            previous_round = points.iter().zip(previous_round.iter()).map(|(p, previous_c)| {
+            previous_round = points.iter().map(|p| {
                 let (index_c, _) = Self::closest_centroid(p.coordinates(), centroids.as_slice());
-
                 new_centroids[index_c].push(p.coordinates());
-
-                if has_converged && index_c != *previous_c {
-                    has_converged = false;
-                }
-
                 index_c
             }).collect();
 
-            if has_converged {
+            let updated_centroids: Vec<Vec<f64>> = new_centroids.into_iter().map(|ref v| {
+                Statistics::mean(&v)
+            }).collect();
+
+            let change = match centroids.iter().zip(updated_centroids.iter()).map(|(centroid, updated_centroid)| {
+                SquaredEuclidean::distance(&centroid, &updated_centroid)
+            }).max_by(|a, b| {
+                a.partial_cmp(&b).unwrap_or(Ordering::Equal)
+            }) {
+                Some(max_change) => max_change,
+                None => panic!()
+            };
+
+            if change < stop_condition {
                 break;
             }
 
-            centroids = new_centroids.into_iter().map(|ref v| {
-                Statistics::mean(&v)
-            }).collect();
+            centroids = updated_centroids;
 
             i += 1;
         }
@@ -67,7 +72,7 @@ impl KMeans {
         }
     }
 
-    fn initial_centroids(points: &[Point], no_clusters: usize, init_method: KMeansInitialization, precomputed: Option<&[Vec<f64>]>) -> Vec<Vec<f64>> {
+    pub fn initial_centroids(points: &[Point], no_clusters: usize, init_method: KMeansInitialization, precomputed: Option<&[Vec<f64>]>) -> Vec<Vec<f64>> {
         match init_method {
             Random => {
                 let mut rng = rand::thread_rng();
@@ -159,7 +164,7 @@ mod tests {
         let mut total = 0_u64;
         for _ in 0..repeat_count {
             let start = time::precise_time_ns();
-            KMeans::run(points.as_mut_slice(), 10, 15, KMeansInitialization::Random, None);
+            KMeans::run(points.as_mut_slice(), 10, 15, 0.00001, KMeansInitialization::Random, None);
             let end = time::precise_time_ns();
             total += end - start
         }

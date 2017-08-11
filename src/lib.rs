@@ -8,6 +8,7 @@ pub mod xmeans;
 pub mod agglomerative;
 pub mod clarans;
 pub mod fuzzy_c_means;
+pub mod mini_batch_kmeans;
 
 pub mod kmeanscluster;
 pub mod cluster;

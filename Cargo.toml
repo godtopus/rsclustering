@@ -1,7 +1,15 @@
 [package]
 name = "rust-clustering"
 version = "0.1.0"
-authors = ["godtopus <marcus.ording@hotmail.com>"]
+authors = ["godtopus"]
+
+description = "A clustering library."
+repository = "https://github.com/godtopus/rust-clustering"
+documentation = ""
+keywords = ["machine","learning","stats","data","machine-learning","clustering"]
+categories = ["science"]
+readme = "README.md"
+license = ""
 
 [dependencies]
 rand = "0.3.16"

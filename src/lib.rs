@@ -1,5 +1,6 @@
 //#![feature(test)]
 #![allow(dead_code)]
+#![allow(unused_imports)]
 
 extern crate rand;
 extern crate time;
@@ -21,9 +22,12 @@ pub mod statistics {
     pub mod distance;
 }
 
-pub mod kdtree;
-pub mod cure;
-pub mod xmeans;
-pub mod clarans;
+pub mod experimental {
+    pub mod kdtree;
+    pub mod cure;
+    pub mod xmeans;
+    pub mod clarans;
+    pub mod cluster;
+}
+
 pub mod point;
-pub mod cluster;

@@ -6,7 +6,7 @@ use std::cmp::Ordering;
 use std::usize;
 use point::Point;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
-use xmeans::XMeansInitialization::*;
+use experimental::xmeans::XMeansInitialization::*;
 use statistics::distance::{Distance, SquaredEuclidean};
 use clustering::kmeans::*;
 

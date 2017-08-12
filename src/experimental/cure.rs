@@ -1,7 +1,7 @@
 // https://www.cis.upenn.edu/~sudipto/mypapers/cure_final.pdf
 
 use std::collections::BinaryHeap;
-use cluster::Cluster;
+use experimental::cluster::Cluster;
 use point::Point;
 
 pub fn cure(points: Vec<Point>, no_clusters: usize, number_represent_points: usize, compression: f64) -> Vec<Cluster> {

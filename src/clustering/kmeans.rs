@@ -24,17 +24,40 @@ pub struct KMeans {
     assignments: Vec<usize>,
     centroids: Vec<Point>,
     iterations: usize,
-    converged: bool
+    converged: bool,
+    init_method: KMeansInitialization,
+    precomputed: Option<Vec<Vec<f64>>>,
+    max_iterations: usize,
+    tolerance: f64
+}
+
+impl Default for KMeans {
+    fn default() -> KMeans {
+        KMeans {
+            assignments: vec![],
+            centroids: vec![],
+            iterations: 0,
+            converged: false,
+            init_method: Random,
+            precomputed: None,
+            max_iterations: 15,
+            tolerance: 0.00001
+        }
+    }
 }
 
 impl KMeans {
-    pub fn run(points: &[Point], no_clusters: usize, max_iterations: usize, tolerance: f64, init_method: KMeansInitialization, precomputed: Option<&[Vec<f64>]>) -> Self {
-        let mut centroids = Self::initial_centroids(points, no_clusters, init_method, precomputed);
+    pub fn new() -> Self {
+        KMeans::default()
+    }
+
+    pub fn run(self, points: &[Point], no_clusters: usize) -> Self {
+        let mut centroids = self.initial_centroids(points, no_clusters);
 
         let mut i = 0;
-        let stop_condition = tolerance * tolerance;
+        let stop_condition = self.tolerance * self.tolerance;
 
-        while i < max_iterations {
+        while i < self.max_iterations {
             let updated_centroids: Vec<Vec<f64>> =
                 points.par_iter().fold(|| HashMap::with_capacity(no_clusters), |mut new_centroids, point| {
                     let (index_c, _) = Self::closest_centroid(point.coordinates(), centroids.as_slice());
@@ -58,12 +81,13 @@ impl KMeans {
             assignments: points.iter().map(|p| Self::closest_centroid(p.coordinates(), centroids.as_slice()).0).collect(),
             centroids: centroids.into_iter().map(|c| Point::new(c)).collect(),
             iterations: i,
-            converged: i < max_iterations
+            converged: i < self.max_iterations,
+            .. self
         }
     }
 
-    pub fn initial_centroids(points: &[Point], no_clusters: usize, init_method: KMeansInitialization, precomputed: Option<&[Vec<f64>]>) -> Vec<Vec<f64>> {
-        match init_method {
+    pub fn initial_centroids(&self, points: &[Point], no_clusters: usize) -> Vec<Vec<f64>> {
+        match self.init_method {
             Random => {
                 let mut rng = rand::thread_rng();
                 let between = Range::new(0, points.len());
@@ -100,7 +124,7 @@ impl KMeans {
                 centroids
             },
             Precomputed => {
-                precomputed.expect("Expected a slice of clusters, on the form Vec<f64>").to_vec()
+                vec![]//self.precomputed.expect("Expected a vec of clusters, on the form Vec<f64>").clone()
             }
         }
     }
@@ -127,6 +151,14 @@ impl KMeans {
         } else {
             Err(self.iterations)
         }
+    }
+
+    pub fn set_tolerance(self, tolerance: f64) -> Self {
+        KMeans { tolerance: tolerance, .. self }
+    }
+
+    pub fn set_max_iterations(self, max_iterations: usize) -> Self {
+        KMeans { max_iterations: max_iterations, .. self }
     }
 }
 
@@ -162,7 +194,7 @@ mod tests {
         let mut total = 0_u64;
         for _ in 0..repeat_count {
             let start = time::precise_time_ns();
-            KMeans::run(points.as_mut_slice(), 10, 15, 0.00001, KMeansInitialization::Random, None);
+            KMeans::new().run(points.as_mut_slice(), 10);
             let end = time::precise_time_ns();
             total += end - start
         }

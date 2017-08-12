@@ -18,7 +18,7 @@ pub struct MiniBatchKMeans {
 
 impl MiniBatchKMeans {
     pub fn run(points: &[Point], no_clusters: usize, max_iterations: usize, tolerance: f64, batch_size: usize, init_method: KMeansInitialization, precomputed: Option<&[Vec<f64>]>) -> Self {
-        let mut centroids = KMeans::initial_centroids(points, no_clusters, init_method, precomputed);
+        let mut centroids = KMeans::new().initial_centroids(points, no_clusters);// KMeans::new().initial_centroids(points, no_clusters, init_method, precomputed);
         let mut cluster_size = vec![0.0; no_clusters];
 
         let mut rng = rand::thread_rng();

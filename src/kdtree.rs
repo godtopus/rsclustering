@@ -1,5 +1,5 @@
 use point::Point;
-use distance::*;
+use statistics::distance::{Distance, SquaredEuclidean};
 use std::f64;
 use std::ops::Deref;
 use std::cmp::Ordering;

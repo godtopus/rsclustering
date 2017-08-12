@@ -9,9 +9,9 @@ use std::cmp::Ordering;
 use std::usize;
 use std::f64;
 use point::Point;
-use distance::*;
-use fuzzy_c_means::FuzzyCMeansInitialization::*;
-use statistics::Statistics;
+use clustering::fuzzy_c_means::FuzzyCMeansInitialization::*;
+use statistics::distance::{Distance, SquaredEuclidean};
+use statistics::statistics::Statistics;
 use rayon::prelude::*;
 
 use std::sync::{Mutex};

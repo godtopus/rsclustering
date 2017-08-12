@@ -5,7 +5,7 @@ use std::cmp::Ordering;
 use std::usize;
 use std::f64;
 use point::Point;
-use distance::*;
+use statistics::distance::{Distance, SquaredEuclidean};
 use std::collections::HashMap;
 use std::collections::HashSet;
 use rayon::prelude::*;

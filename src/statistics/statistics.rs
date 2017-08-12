@@ -1,4 +1,4 @@
-use distance::*;
+use statistics::distance::{Distance, SquaredEuclidean};
 use point::Point;
 use std::f64::consts::PI;
 use nalgebra::*;

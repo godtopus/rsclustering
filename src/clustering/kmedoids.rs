@@ -5,11 +5,11 @@ use rand::distributions::{IndependentSample, Range};
 use std::cmp::Ordering;
 use std::usize;
 use point::Point;
-use distance::*;
 use std::collections::HashMap;
-use kmedoids::KMedoidsInitialization::*;
+use statistics::distance::{Distance, Manhattan};
+use statistics::statistics::Statistics;
+use clustering::kmedoids::KMedoidsInitialization::*;
 use rayon::prelude::*;
-use statistics::*;
 
 pub enum KMedoidsInitialization {
     Random,

@@ -5,9 +5,9 @@ use rand::distributions::{IndependentSample, Range};
 use std::cmp::Ordering;
 use std::usize;
 use point::Point;
-use distance::*;
-use statistics::Statistics;
-use kmeans::*;
+use statistics::distance::{Distance, SquaredEuclidean};
+use statistics::statistics::Statistics;
+use clustering::kmeans::*;
 
 pub struct MiniBatchKMeans {
     assignments: Vec<usize>,

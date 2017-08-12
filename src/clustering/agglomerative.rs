@@ -2,9 +2,9 @@ use std::cmp::Ordering;
 use std::usize;
 use std::f64;
 use point::Point;
-use distance::*;
-use agglomerative::Link::*;
-use statistics::Statistics;
+use clustering::agglomerative::Link::*;
+use statistics::distance::{Distance, SquaredEuclidean};
+use statistics::statistics::Statistics;
 use rayon::prelude::*;
 
 pub enum Link {

@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::f64;
 use std::ops::Deref;
 use point::Point;
-use distance::*;
+use statistics::distance::{Distance, SquaredEuclidean};
 
 #[derive(Clone)]
 pub struct Cluster {

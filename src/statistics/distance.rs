@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 use nalgebra::*;
-use statistics::Statistics;
+use statistics::statistics::Statistics;
 
 pub struct SquaredEuclidean;
 pub struct Euclidean;

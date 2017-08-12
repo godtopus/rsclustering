@@ -14,6 +14,7 @@ use rayon::prelude::*;
 use std::collections::HashMap;
 use itertools::Itertools;
 
+#[derive(Copy, Clone, Debug)]
 pub enum KMeansInitialization {
     Random,
     KMeansPlusPlus,
@@ -154,11 +155,19 @@ impl KMeans {
     }
 
     pub fn set_tolerance(self, tolerance: f64) -> Self {
-        KMeans { tolerance: tolerance, .. self }
+        KMeans { tolerance, .. self }
     }
 
     pub fn set_max_iterations(self, max_iterations: usize) -> Self {
-        KMeans { max_iterations: max_iterations, .. self }
+        KMeans { max_iterations, .. self }
+    }
+
+    pub fn set_init_method(self, init_method: KMeansInitialization) -> Self {
+        KMeans { init_method, .. self }
+    }
+
+    pub fn set_precomputed(self, precomputed: &Option<Vec<Vec<f64>>>) -> Self {
+        KMeans { precomputed: precomputed.clone(), .. self }
     }
 }
 
@@ -181,37 +190,5 @@ mod tests {
         let output = kmeans(input.as_mut_slice(), 2, usize::max_value());
 
         assert_eq!(expected, output);
-    }*/
-
-    #[test]
-    fn bench_100000_points_kmeans() {
-        let mut rng = rand::thread_rng();
-        let mut points: Vec<Point> = (0..100000).map(|_| {
-            Point::new((0..2).into_iter().map(|_| rng.next_f64()).collect())
-        }).collect();
-
-        let repeat_count = 10_u8;
-        let mut total = 0_u64;
-        for _ in 0..repeat_count {
-            let start = time::precise_time_ns();
-            KMeans::new().run(points.as_mut_slice(), 10);
-            let end = time::precise_time_ns();
-            total += end - start
-        }
-
-        let avg_ns: f64 = total as f64 / repeat_count as f64;
-        let avg_ms = avg_ns / 1.0e6;
-
-        println!("{} runs, avg {}", repeat_count, avg_ms);
-    }
-
-    /*#[bench]
-    fn bench_100000_points(b: &mut Bencher) {
-        let mut rng = rand::thread_rng();
-        let points = Vec::from_fn(100000, |_| Point::new(vec![rng.next_f64(), rng.next_f64()]));
-
-        b.iter(|| {
-            kmeans(points, 50, usize::max_value());
-        });
     }*/
 }

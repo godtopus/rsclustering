@@ -13,24 +13,49 @@ pub struct MiniBatchKMeans {
     assignments: Vec<usize>,
     centroids: Vec<Point>,
     iterations: usize,
-    converged: bool
+    converged: bool,
+    init_method: KMeansInitialization,
+    precomputed: Option<Vec<Vec<f64>>>,
+    max_iterations: usize,
+    tolerance: f64,
+    batch_size: usize
+}
+
+impl Default for MiniBatchKMeans {
+    fn default() -> MiniBatchKMeans {
+        MiniBatchKMeans {
+            assignments: vec![],
+            centroids: vec![],
+            iterations: 0,
+            converged: false,
+            init_method: KMeansInitialization::Random,
+            precomputed: None,
+            max_iterations: 15,
+            tolerance: 0.00001,
+            batch_size: 10000
+        }
+    }
 }
 
 impl MiniBatchKMeans {
-    pub fn run(points: &[Point], no_clusters: usize, max_iterations: usize, tolerance: f64, batch_size: usize, init_method: KMeansInitialization, precomputed: Option<&[Vec<f64>]>) -> Self {
-        let mut centroids = KMeans::new().initial_centroids(points, no_clusters);// KMeans::new().initial_centroids(points, no_clusters, init_method, precomputed);
+    pub fn new() -> Self {
+        MiniBatchKMeans::default()
+    }
+
+    pub fn run(self, points: &[Point], no_clusters: usize) -> Self {
+        let mut centroids = KMeans::new().set_init_method(self.init_method).set_precomputed(&self.precomputed).initial_centroids(points, no_clusters);
         let mut cluster_size = vec![0.0; no_clusters];
 
         let mut rng = rand::thread_rng();
         let between = Range::new(0, points.len());
 
         let mut i = 0;
-        let stop_condition = tolerance * tolerance;
+        let stop_condition = self.tolerance * self.tolerance;
 
-        while i < max_iterations {
+        while i < self.max_iterations {
             let previous_centroids = centroids.clone();
 
-            for _ in 0..batch_size {
+            for _ in 0..self.batch_size {
                 let p = points[between.ind_sample(&mut rng)].coordinates();
 
                 let (index_c, _) =  Self::closest_centroid(p, centroids.as_slice());
@@ -56,7 +81,8 @@ impl MiniBatchKMeans {
             assignments: vec![],
             centroids: centroids.into_iter().map(|c| Point::new(c)).collect(),
             iterations: i,
-            converged: i < max_iterations
+            converged: i < self.max_iterations,
+            .. self
         }
     }
 
@@ -83,7 +109,6 @@ mod tests {
     use rand;
     use rand::Rng;
     use time;
-    //use test::Bencher;
 
     /*#[test]
     fn can_run() {
@@ -96,37 +121,5 @@ mod tests {
         let output = kmeans(input.as_mut_slice(), 2, usize::max_value());
 
         assert_eq!(expected, output);
-    }*/
-
-    #[test]
-    fn bench_100000_points_mini_batch_kmeans() {
-        let mut rng = rand::thread_rng();
-        let mut points: Vec<Point> = (0..100000).map(|_| {
-            Point::new((0..2).into_iter().map(|_| rng.next_f64()).collect())
-        }).collect();
-
-        let repeat_count = 10_u8;
-        let mut total = 0_u64;
-        for _ in 0..repeat_count {
-            let start = time::precise_time_ns();
-            MiniBatchKMeans::run(points.as_mut_slice(), 10, 15, 0.00001, 10000, KMeansInitialization::Random, None);
-            let end = time::precise_time_ns();
-            total += end - start
-        }
-
-        let avg_ns: f64 = total as f64 / repeat_count as f64;
-        let avg_ms = avg_ns / 1.0e6;
-
-        println!("{} runs, avg {}", repeat_count, avg_ms);
-    }
-
-    /*#[bench]
-    fn bench_100000_points(b: &mut Bencher) {
-        let mut rng = rand::thread_rng();
-        let points = Vec::from_fn(100000, |_| Point::new(vec![rng.next_f64(), rng.next_f64()]));
-
-        b.iter(|| {
-            kmeans(points, 50, usize::max_value());
-        });
     }*/
 }

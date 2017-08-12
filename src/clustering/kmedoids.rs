@@ -11,6 +11,7 @@ use statistics::statistics::Statistics;
 use clustering::kmedoids::KMedoidsInitialization::*;
 use rayon::prelude::*;
 
+#[derive(Copy, Clone, Debug)]
 pub enum KMedoidsInitialization {
     Random,
     KMeansPlusPlus,
@@ -21,18 +22,41 @@ pub struct KMedoids {
     assignments: Vec<usize>,
     centroids: Vec<Point>,
     iterations: usize,
-    converged: bool
+    converged: bool,
+    init_method: KMedoidsInitialization,
+    precomputed: Option<Vec<Vec<f64>>>,
+    max_iterations: usize,
+    tolerance: f64
+}
+
+impl Default for KMedoids {
+    fn default() -> KMedoids {
+        KMedoids {
+            assignments: vec![],
+            centroids: vec![],
+            iterations: 0,
+            converged: false,
+            init_method: Random,
+            precomputed: None,
+            max_iterations: 15,
+            tolerance: 0.00001
+        }
+    }
 }
 
 impl KMedoids {
-    pub fn run(points: &[Point], no_clusters: usize, max_iterations: usize, tolerance: f64, init_method: KMedoidsInitialization) -> Self {
-        let mut medoids = Self::initial_medoids(points, no_clusters, init_method);
+    pub fn new() -> Self {
+        KMedoids::default()
+    }
+
+    pub fn run(self, points: &[Point], no_clusters: usize) -> Self {
+        let mut medoids = self.initial_medoids(points, no_clusters);
         let mut cached_medoids: Vec<&[f64]> = medoids.iter().map(|(index_m, _)| points[*index_m].coordinates()).collect();
 
         let mut i = 0;
-        let stop_condition = tolerance * tolerance;
+        let stop_condition = self.tolerance * self.tolerance;
 
-        while i < max_iterations {
+        while i < self.max_iterations {
             let updated_medoids: HashMap<usize, Vec<usize>> =
                 points.par_iter().enumerate().fold(|| HashMap::with_capacity(no_clusters), |mut new_medoids, (index_p, point)| {
                     let (index_c, _) = Self::closest_medoid(point.coordinates(), cached_medoids.as_slice());
@@ -81,12 +105,13 @@ impl KMedoids {
             assignments: points.iter().map(|p| Self::closest_medoid(p.coordinates(), cached_medoids.as_slice()).0).collect(),
             centroids: medoids.into_iter().map(|(index_m, _)| points[index_m].clone()).collect(),
             iterations: i,
-            converged: i < max_iterations
+            converged: i < self.max_iterations,
+            .. self
         }
     }
 
-    fn initial_medoids(points: &[Point], no_clusters: usize, init_method: KMedoidsInitialization) -> HashMap<usize, Vec<usize>> {
-        match init_method {
+    fn initial_medoids(&self, points: &[Point], no_clusters: usize) -> HashMap<usize, Vec<usize>> {
+        match self.init_method {
             Random => {
                 let mut rng = rand::thread_rng();
                 let between = Range::new(0, points.len());
@@ -149,26 +174,4 @@ mod tests {
     use rand;
     use rand::Rng;
     use time;
-
-    #[test]
-    fn bench_10000_points_kmedoids() {
-        let mut rng = rand::thread_rng();
-        let mut points: Vec<Point> = (0..100000).map(|_| {
-            Point::new((0..2).into_iter().map(|_| rng.next_f64()).collect())
-        }).collect();
-
-        let repeat_count = 10_u8;
-        let mut total = 0_u64;
-        for _ in 0..repeat_count {
-            let start = time::precise_time_ns();
-            KMedoids::run(points.as_mut_slice(), 10, 15, 0.00001, KMedoidsInitialization::Random);
-            let end = time::precise_time_ns();
-            total += end - start
-        }
-
-        let avg_ns: f64 = total as f64 / repeat_count as f64;
-        let avg_ms = avg_ns / 1.0e6;
-
-        println!("{} runs, avg {}", repeat_count, avg_ms);
-    }
 }

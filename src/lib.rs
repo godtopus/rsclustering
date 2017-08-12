@@ -9,7 +9,7 @@ extern crate nalgebra;
 
 pub mod clustering {
     pub mod agglomerative;
-    pub mod fuzzy_c_means;
+    pub mod fuzzy_cmeans;
     pub mod kmeans;
     pub mod kmedians;
     pub mod kmedoids;

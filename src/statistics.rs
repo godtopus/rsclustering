@@ -2,10 +2,35 @@ use distance::*;
 use point::Point;
 use std::f64::consts::PI;
 use nalgebra::*;
+use std::cmp::Ordering;
 
 pub struct Statistics;
 
 impl Statistics {
+    #[inline]
+    pub fn max_change(centroids: &[Vec<f64>], updated_centroids: &[Vec<f64>]) -> f64 {
+        match centroids.iter().zip(updated_centroids.iter()).map(|(centroid, updated_centroid)| {
+            SquaredEuclidean::distance(&centroid, &updated_centroid)
+        }).max_by(|a, b| {
+            a.partial_cmp(&b).unwrap_or(Ordering::Equal)
+        }) {
+            Some(max_change) => max_change,
+            None => panic!()
+        }
+    }
+
+    #[inline]
+    pub fn max_change_slice(centroids: &[&[f64]], updated_centroids: &[&[f64]]) -> f64 {
+        match centroids.iter().zip(updated_centroids.iter()).map(|(centroid, updated_centroid)| {
+            SquaredEuclidean::distance(&centroid, &updated_centroid)
+        }).max_by(|a, b| {
+            a.partial_cmp(&b).unwrap_or(Ordering::Equal)
+        }) {
+            Some(max_change) => max_change,
+            None => panic!()
+        }
+    }
+
     #[inline]
     pub fn mean(centroids: &[&[f64]]) -> Vec<f64> {
         match centroids.len() {

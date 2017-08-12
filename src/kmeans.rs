@@ -10,6 +10,9 @@ use point::Point;
 use distance::*;
 use kmeans::KMeansInitialization::*;
 use statistics::Statistics;
+use rayon::prelude::*;
+use std::collections::HashMap;
+use itertools::Itertools;
 
 pub enum KMeansInitialization {
     Random,
@@ -28,44 +31,31 @@ impl KMeans {
     pub fn run(points: &[Point], no_clusters: usize, max_iterations: usize, tolerance: f64, init_method: KMeansInitialization, precomputed: Option<&[Vec<f64>]>) -> Self {
         let mut centroids = Self::initial_centroids(points, no_clusters, init_method, precomputed);
 
-        let mut previous_round = vec![usize::max_value(); points.len()];
-
         let mut i = 0;
         let stop_condition = tolerance * tolerance;
 
         while i < max_iterations {
-            let mut new_centroids: Vec<Vec<&[f64]>> = vec![vec![]; no_clusters];
+            let updated_centroids: Vec<Vec<f64>> =
+                points.par_iter().fold(|| HashMap::with_capacity(no_clusters), |mut new_centroids, point| {
+                    let (index_c, _) = Self::closest_centroid(point.coordinates(), centroids.as_slice());
+                    (*new_centroids.entry(index_c).or_insert(vec![])).push(point.coordinates());
+                    new_centroids
+                }).reduce(|| HashMap::with_capacity(no_clusters), |mut new_centroids, partial| {
+                    new_centroids.extend(partial);
+                    new_centroids
+                }).into_iter().sorted_by(|a, b| a.0.cmp(&b.0)).into_iter().map(|(_, ref v)| Statistics::mean(&v)).collect();
 
-            previous_round = points.iter().map(|p| {
-                let (index_c, _) = Self::closest_centroid(p.coordinates(), centroids.as_slice());
-                new_centroids[index_c].push(p.coordinates());
-                index_c
-            }).collect();
-
-            let updated_centroids: Vec<Vec<f64>> = new_centroids.into_iter().map(|ref v| {
-                Statistics::mean(&v)
-            }).collect();
-
-            let change = match centroids.iter().zip(updated_centroids.iter()).map(|(centroid, updated_centroid)| {
-                SquaredEuclidean::distance(&centroid, &updated_centroid)
-            }).max_by(|a, b| {
-                a.partial_cmp(&b).unwrap_or(Ordering::Equal)
-            }) {
-                Some(max_change) => max_change,
-                None => panic!()
-            };
-
-            if change < stop_condition {
+            let change = Statistics::max_change(centroids.as_slice(), updated_centroids.as_slice());
+            centroids = updated_centroids;
+            if change <= stop_condition {
                 break;
             }
-
-            centroids = updated_centroids;
 
             i += 1;
         }
 
         KMeans {
-            assignments: previous_round,
+            assignments: points.iter().map(|p| Self::closest_centroid(p.coordinates(), centroids.as_slice()).0).collect(),
             centroids: centroids.into_iter().map(|c| Point::new(c)).collect(),
             iterations: i,
             converged: i < max_iterations

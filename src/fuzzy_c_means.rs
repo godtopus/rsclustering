@@ -48,14 +48,14 @@ impl FuzzyCMeans {
         let mut i = 0;
 
         while i < max_iterations {
-            let max_delta = Mutex::new(f64::INFINITY);
+            let max_delta = Mutex::new(f64::NEG_INFINITY);
 
             previous_round = points.par_iter().zip(previous_round.par_iter()).map(|(p, previous_memberships)| {
                 let memberships = Self::memberships(p.coordinates(), centroids.as_slice(), fuzziness);
 
                 let delta = SquaredEuclidean::distance(&memberships, previous_memberships);
                 let mut max_delta = max_delta.lock().unwrap();
-                if delta < *max_delta {
+                if delta > *max_delta {
                     *max_delta = delta;
                 }
 

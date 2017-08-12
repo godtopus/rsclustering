@@ -8,6 +8,8 @@ use point::Point;
 use distance::*;
 use kmedians::KMediansInitialization::*;
 use rayon::prelude::*;
+use statistics::*;
+use std::collections::HashMap;
 
 pub enum KMediansInitialization {
     Random,
@@ -23,54 +25,48 @@ pub struct KMedians {
 }
 
 impl KMedians {
-    pub fn run(points: &[Point], no_clusters: usize, max_iterations: usize, init_method: KMediansInitialization, precomputed: Option<&[Vec<f64>]>) -> Self {
+    pub fn run(points: &[Point], no_clusters: usize, max_iterations: usize, tolerance: f64, init_method: KMediansInitialization, precomputed: Option<&[Vec<f64>]>) -> Self {
         let dimension = points[0].coordinates().len() as f64;
 
         let mut centroids = Self::initial_centroids(points, no_clusters, init_method, precomputed);
 
-        let mut previous_round = vec![usize::max_value(); points.len()];
-
         let mut i = 0;
+        let stop_condition = tolerance * tolerance;
 
         while i < max_iterations {
-            let mut has_converged = true;
-            let mut new_centroids: Vec<Vec<&[f64]>> = vec![vec![]; no_clusters];
+            let updated_centroids: Vec<Vec<f64>> =
+                points.par_iter().fold(|| HashMap::with_capacity(no_clusters), |mut new_centroids, point| {
+                    let (index_c, _) = Self::closest_centroid(point.coordinates(), centroids.as_slice());
+                    (*new_centroids.entry(index_c).or_insert(vec![])).push(point.coordinates());
+                    new_centroids
+                }).reduce(|| HashMap::with_capacity(no_clusters), |mut new_centroids, partial| {
+                    new_centroids.extend(partial);
+                    new_centroids
+                }).into_iter().map(|(_, ref mut v)| {
+                    let relative_index_median = v.len() / 2;
 
-            previous_round = points.iter().zip(previous_round.iter()).map(|(p, previous_c)| {
-                let (index_c, _) = Self::closest_centroid(p.coordinates(), centroids.as_slice());
+                    (0..dimension as usize).map(|index_dimension| {
+                        v.sort_by(|p1, p2| p1[index_dimension].partial_cmp(&p2[index_dimension]).unwrap_or(Ordering::Equal));
 
-                new_centroids[index_c].push(p.coordinates());
+                        if v.len() % 2 == 0 {
+                            ((v[relative_index_median - 1][index_dimension] + v[relative_index_median][index_dimension]) as f64) / 2.0
+                        } else {
+                            v[relative_index_median][index_dimension]
+                        }
+                    }).collect()
+                }).collect();
 
-                if has_converged && index_c != *previous_c {
-                    has_converged = false;
-                }
-
-                index_c
-            }).collect();
-
-            if has_converged {
+            let change = Statistics::max_change(centroids.as_slice(), updated_centroids.as_slice());
+            centroids = updated_centroids;
+            if change <= stop_condition {
                 break;
             }
-
-            centroids = new_centroids.into_par_iter().map(|ref mut v| {
-                let relative_index_median = v.len() / 2;
-
-                (0..dimension as usize).map(|index_dimension| {
-                    v.sort_by(|p1, p2| p1[index_dimension].partial_cmp(&p2[index_dimension]).unwrap_or(Ordering::Equal));
-
-                    if v.len() % 2 == 0 {
-                        ((v[relative_index_median][index_dimension] + v[relative_index_median + 1][index_dimension]) as f64) / 2.0
-                    } else {
-                        v[relative_index_median][index_dimension]
-                    }
-                }).collect()
-            }).collect();
 
             i += 1;
         }
 
         KMedians {
-            assignments: previous_round,
+            assignments: points.iter().map(|p| Self::closest_centroid(p.coordinates(), centroids.as_slice()).0).collect(),
             centroids: centroids.into_iter().map(|c| Point::new(c)).collect(),
             iterations: i,
             converged: i < max_iterations
@@ -151,7 +147,7 @@ mod tests {
         let mut total = 0_u64;
         for _ in 0..repeat_count {
             let start = time::precise_time_ns();
-            KMedians::run(points.as_mut_slice(), 10, 15, KMediansInitialization::Random, None);
+            KMedians::run(points.as_mut_slice(), 10, 15, 0.00001, KMediansInitialization::Random, None);
             let end = time::precise_time_ns();
             total += end - start
         }

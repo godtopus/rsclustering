@@ -45,14 +45,17 @@ impl Agglomerative {
                 }).collect(),
         };
 
+        let mut i = 0;
+
         while clusters.len() > no_clusters {
             clusters = Self::merge_clusters(points, clusters, link_criterion);
+            i += 1;
         }
 
         Agglomerative {
             assignments: vec![],
             centroids: vec![],
-            iterations: 1,
+            iterations: i,
             converged: true
         }
     }

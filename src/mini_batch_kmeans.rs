@@ -19,7 +19,7 @@ pub struct MiniBatchKMeans {
 impl MiniBatchKMeans {
     pub fn run(points: &[Point], no_clusters: usize, max_iterations: usize, tolerance: f64, batch_size: usize, init_method: KMeansInitialization, precomputed: Option<&[Vec<f64>]>) -> Self {
         let mut centroids = KMeans::initial_centroids(points, no_clusters, init_method, precomputed);
-        let mut cluster_size = vec![0; no_clusters];
+        let mut cluster_size = vec![0.0; no_clusters];
 
         let mut rng = rand::thread_rng();
         let between = Range::new(0, points.len());
@@ -34,26 +34,17 @@ impl MiniBatchKMeans {
                 let p = points[between.ind_sample(&mut rng)].coordinates();
 
                 let (index_c, _) =  Self::closest_centroid(p, centroids.as_slice());
-                cluster_size[index_c] += 1;
-
+                cluster_size[index_c] += 1.0;
 
                 // Gradient descent
-                let eta = 1.0 / (cluster_size[index_c]) as f64;
+                let eta = 1.0 / cluster_size[index_c];
                 let eta_compliment = 1.0 - eta;
                 centroids[index_c] = centroids[index_c].iter().zip(p.iter()).map(|(c, p)| {
                     eta_compliment * c + eta * p
                 }).collect();
             };
 
-            let change = match previous_centroids.iter().zip(centroids.iter()).map(|(centroid, updated_centroid)| {
-                SquaredEuclidean::distance(&centroid, &updated_centroid)
-            }).max_by(|a, b| {
-                a.partial_cmp(&b).unwrap_or(Ordering::Equal)
-            }) {
-                Some(max_change) => max_change,
-                None => panic!()
-            };
-
+            let change = Statistics::max_change(previous_centroids.as_slice(), centroids.as_slice());
             if change < stop_condition {
                 break;
             }

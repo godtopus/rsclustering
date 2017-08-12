@@ -66,19 +66,23 @@ impl Clarans {
                         false => f64::INFINITY
                     };
 
-                    if point_cluster_index == current_medoid_cluster_index {
-                        if distance_candidate >= distance_nearest {
-                            return distance_nearest - distance_current
-                        } else {
-                            return distance_candidate - distance_current
-                        }
-                    } else if point_cluster_index == other_medoid_cluster_index {
-                        if distance_candidate <= distance_nearest {
-                            return distance_candidate - distance_nearest
-                        }
+                    match point_cluster_index {
+                        i if i == current_medoid_cluster_index => {
+                            if distance_candidate >= distance_nearest {
+                                distance_nearest - distance_current
+                            } else {
+                                distance_candidate - distance_current
+                            }
+                        },
+                        i if i == other_medoid_cluster_index => {
+                            if distance_candidate <= distance_nearest {
+                                distance_candidate - distance_nearest
+                            } else {
+                                0.0
+                            }
+                        },
+                        _ => 0.0
                     }
-
-                    0.0
                 }).sum();
 
                 if candidate_cost < -1.0 {

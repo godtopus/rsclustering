@@ -142,17 +142,17 @@ impl KMeans {
         }
     }
 
+    pub fn assignments(&self) -> &[usize] { &self.assignments }
+
     pub fn centroids(&self) -> &[Point] {
         &self.centroids
     }
 
-    pub fn converged(&self) -> Result<usize, usize> {
-        if self.converged {
-            Ok(self.iterations)
-        } else {
-            Err(self.iterations)
-        }
-    }
+    pub fn converged(&self) -> bool { self.converged }
+
+    pub fn iterations(&self) -> usize { self.iterations }
+
+    pub fn max_iterations(&self) -> usize { self.max_iterations }
 
     pub fn set_tolerance(self, tolerance: f64) -> Self {
         KMeans { tolerance, .. self }
@@ -176,19 +176,28 @@ mod tests {
     use super::*;
     use rand;
     use rand::Rng;
-    use time;
-    //use test::Bencher;
 
-    /*#[test]
-    fn can_run() {
-        let expected: Vec<KMeansCluster> = vec![
-            KMeansCluster::from(vec![Point::new(vec![0.0, 1.0]), Point::new(vec![1.0, 2.0]), Point::new(vec![2.0, 3.0])]),
-            KMeansCluster::from(vec![Point::new(vec![3.0, 4.0]), Point::new(vec![4.0, 5.0])])
-        ];
-        let mut input = vec![Point::new(vec![0.0, 1.0]), Point::new(vec![1.0, 2.0]), Point::new(vec![2.0, 3.0]), Point::new(vec![3.0, 4.0]), Point::new(vec![4.0, 5.0])];
+    #[test]
+    fn can_run_kmeans() {
+        let dimension = 2;
 
-        let output = kmeans(input.as_mut_slice(), 2, usize::max_value());
+        let mut rng = rand::thread_rng();
+        let mut points: Vec<Point> = (0..10000).map(|_| {
+            Point::new((0..dimension).into_iter().map(|_| rng.next_f64()).collect())
+        }).collect();
 
-        assert_eq!(expected, output);
-    }*/
+        let output = KMeans::new().run(points.as_mut_slice(), 10);
+
+        assert_eq!(points.len(), output.assignments().len());
+        if output.iterations() < output.max_iterations() {
+            assert!(output.converged());
+        } else if output.iterations() == output.max_iterations() {
+            assert!(!output.converged());
+        } else {
+            panic!("Algorithm should not run for more than max_iterations");
+        }
+
+        assert!(output.assignments().iter().all(|a| *a < output.centroids().len()));
+        assert!(output.centroids().iter().all(|c| c.coordinates().len() == dimension));
+    }
 }

@@ -69,7 +69,7 @@ impl <'a> KDTree<'a> {
         let mut nodes = vec![self];
 
         loop {
-            let mut cur_node = nodes.pop().unwrap();
+            let cur_node = nodes.pop().unwrap();
 
             match cur_node.node.as_ref() {
                 Some(node) => {
@@ -102,7 +102,7 @@ impl <'a> KDTree<'a> {
         let mut nodes = vec![self];
 
         loop {
-            let mut cur_node = nodes.pop().unwrap();
+            let cur_node = nodes.pop().unwrap();
             let node = cur_node.node.unwrap();
 
             if node.coordinates()[cur_node.axis] <= point.coordinates()[cur_node.axis] {

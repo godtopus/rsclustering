@@ -31,3 +31,4 @@ pub mod experimental {
 }
 
 pub mod point;
+pub mod datasets;

@@ -176,6 +176,7 @@ mod tests {
     use super::*;
     use rand;
     use rand::Rng;
+    use datasets::*;
 
     #[test]
     fn can_run_kmeans() {
@@ -199,5 +200,16 @@ mod tests {
 
         assert!(output.assignments().iter().all(|a| *a < output.centroids().len()));
         assert!(output.centroids().iter().all(|c| c.coordinates().len() == dimension));
+    }
+
+    #[test]
+    fn can_run_kmeans_iris() {
+        let output = KMeans::new().run(iris::load().data(), 3);
+
+        println!("{:?}", iris::load().target());
+        println!("{:?}", output.assignments());
+
+        assert_eq!(3, output.centroids().len());
+        assert!(iris::load().target().iter().zip(output.assignments().iter()).all(|(a, b)| a == b));
     }
 }

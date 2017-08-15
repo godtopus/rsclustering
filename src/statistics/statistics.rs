@@ -36,7 +36,7 @@ impl Statistics {
         match centroids.len() {
             0 => vec![],
             _ => {
-                let dimension = centroids[0].len() as f64;
+                let dimension = centroids.len() as f64;
 
                 centroids.iter().fold(vec![0.0; centroids[0].len()], |mut acc, next| {
                     for i in 0..next.len() {

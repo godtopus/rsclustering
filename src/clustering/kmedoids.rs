@@ -63,7 +63,10 @@ impl KMedoids {
                     (*new_medoids.entry(index_c).or_insert(vec![])).push(index_p);
                     new_medoids
                 }).reduce(|| HashMap::with_capacity(no_clusters), |mut new_medoids, partial| {
-                    new_medoids.extend(partial);
+                    for (k, v) in partial.into_iter() {
+                        (*new_medoids.entry(k).or_insert(vec![])).extend(v);
+                    }
+
                     new_medoids
                 }).into_iter().map(|(index_c, cluster_points)| {
                     let current_cost = cluster_points.iter().map(|index_p| {

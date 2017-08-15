@@ -65,7 +65,10 @@ impl KMedians {
                     (*new_centroids.entry(index_c).or_insert(vec![])).push(point.coordinates());
                     new_centroids
                 }).reduce(|| HashMap::with_capacity(no_clusters), |mut new_centroids, partial| {
-                    new_centroids.extend(partial);
+                    for (k, v) in partial.into_iter() {
+                        (*new_centroids.entry(k).or_insert(vec![])).extend(v);
+                    }
+
                     new_centroids
                 }).into_iter().map(|(_, ref mut v)| {
                     let relative_index_median = v.len() / 2;

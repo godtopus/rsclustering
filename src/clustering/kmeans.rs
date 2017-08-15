@@ -65,9 +65,14 @@ impl KMeans {
                     (*new_centroids.entry(index_c).or_insert(vec![])).push(point.coordinates());
                     new_centroids
                 }).reduce(|| HashMap::with_capacity(no_clusters), |mut new_centroids, partial| {
-                    new_centroids.extend(partial);
+                    for (k, v) in partial.into_iter() {
+                        (*new_centroids.entry(k).or_insert(vec![])).extend(v);
+                    }
+
                     new_centroids
-                }).into_iter().sorted_by(|a, b| a.0.cmp(&b.0)).into_iter().map(|(_, ref v)| Statistics::mean(&v)).collect();
+                }).into_iter().sorted_by(|a, b| a.0.cmp(&b.0)).into_iter().map(|(_, ref v)| {
+                    Statistics::mean(&v)
+                }).collect();
 
             let change = Statistics::max_change(centroids.as_slice(), updated_centroids.as_slice());
             centroids = updated_centroids;

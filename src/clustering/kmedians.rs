@@ -156,6 +156,35 @@ impl KMedians {
             None => panic!()
         }
     }
+
+
+    pub fn assignments(&self) -> &[usize] { &self.assignments }
+
+    pub fn centroids(&self) -> &[Point] {
+        &self.centroids
+    }
+
+    pub fn converged(&self) -> bool { self.converged }
+
+    pub fn iterations(&self) -> usize { self.iterations }
+
+    pub fn max_iterations(&self) -> usize { self.max_iterations }
+
+    pub fn set_tolerance(self, tolerance: f64) -> Self {
+        KMedians { tolerance, .. self }
+    }
+
+    pub fn set_max_iterations(self, max_iterations: usize) -> Self {
+        KMedians { max_iterations, .. self }
+    }
+
+    pub fn set_init_method(self, init_method: KMediansInitialization) -> Self {
+        KMedians { init_method, .. self }
+    }
+
+    pub fn set_precomputed(self, precomputed: &Option<Vec<Vec<f64>>>) -> Self {
+        KMedians { precomputed: precomputed.clone(), .. self }
+    }
 }
 
 #[cfg(test)]
@@ -163,5 +192,16 @@ mod tests {
     use super::*;
     use rand;
     use rand::Rng;
-    use time;
+    use datasets::*;
+
+    #[test]
+    fn can_run_kmedians_iris() {
+        let output = KMedians::new().run(iris::load().data(), 3);
+
+        println!("{:?}", iris::load().target());
+        println!("{:?}", output.assignments());
+
+        assert_eq!(3, output.centroids().len());
+        assert!(iris::load().target().iter().zip(output.assignments().iter()).all(|(a, b)| a == b));
+    }
 }
